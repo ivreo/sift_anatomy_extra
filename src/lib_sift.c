@@ -84,6 +84,7 @@ struct sift_keypoints* sift_translate_standard_into_anatomy(const struct sift_ke
 
     struct sift_keypoints* keys = sift_malloc_keypoints();
     for(int i = 0; i < n; i++){
+        //
         struct keypoint* key = sift_malloc_keypoint(n_ori, n_hist, n_bins);
         /* reading the extremum continuous coordinates */
         key->x = k[i].x;

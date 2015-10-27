@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -6,7 +5,6 @@
 #include <assert.h>
 #include <math.h>
 #include <float.h>
-
 
 #include "lib_description.h"
 #include "lib_discrete.h"
@@ -380,19 +378,6 @@ struct sift_scalespace* sift_malloc_scalespace_lowe_floatnspo(int nOct,   /* # o
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 struct sift_keypoints* sift_anatomy_dense(_myfloat* x, int w, int h,
                                           struct sift_parameters* p,
                                           struct sift_scalespace* ss[4],
@@ -443,31 +428,6 @@ struct sift_keypoints* sift_anatomy_dense(_myfloat* x, int w, int h,
     (void)kE;
     (void)kF;
 
-
-    //// EXTRACT A FIBER FROM THE SCALESPACE 
-   // int np = k->size;
-   // _myfloat* xs = malloc(np*sizeof(_myfloat));
-   // _myfloat* ys = malloc(np*sizeof(_myfloat));
-   // for(int ip = 0; ip < np; ip++){
-   //    // xs[ip] = k->list[ip]->x;
-   //    // ys[ip] = k->list[ip]->y;
-   //     xs[ip] = puiss2(k->list[ip]->x); 
-   //     ys[ip] = puiss2(k->list[ip]->y);
-   // }
-  //  int nech;
-  //  _myfloat *fibres = scalespace_fiber(&nech, s, xs, ys, k->size, p);
-  //  FILE* f = fopen("fibre.t", "w");
-
-  //  //for(int p = 0; p < 100; p++){
-  //  for(int ip = 0; ip < np; ip++){
-  //      for(int ids = 0; ids < nech; ids++){
-  //          fprintf(f, "%f ", fibres[ip*nech+ids]);
-  //      }
-  //      fprintf(f, " \n");
-  //  }
-  //  fclose(f);
-
-
     /** scalespace structures*/
     ss[0] = s;
     ss[1] = d;
@@ -476,6 +436,114 @@ struct sift_keypoints* sift_anatomy_dense(_myfloat* x, int w, int h,
 
     return k;
 }
+
+
+
+
+//%//%//%// struct sift_keypoints* sift_anatomy_dense_XXXXXXXXXXXXX(_myfloat* x, int w, int h,
+//%//%//%//                                           struct sift_parameters* p,
+//%//%//%//                                           struct sift_scalespace* ss[4],
+//%//%//%//                                           struct sift_keypoints* kk[6],
+//%//%//%//                                           int flag_semigroup,
+//%//%//%//                                           int flag_dct,
+//%//%//%//                                           int flag_log,
+//%//%//%//                                           int flag_interp)
+//%//%//%// {
+//%//%//%//     struct sift_keypoints* k = sift_malloc_keypoints();
+//%//%//%//     int n_oct = number_of_octaves(w, h, p);
+//%//%//%// 
+//%//%//%//     // normalizing the threshold
+//%//%//%//     _myfloat thresh = convert_threshold(p);
+//%//%//%//     if (flag_log){
+//%//%//%//         //thresh /= exp( M_LN2/( (_myfloat)(p->n_spo))) - 1;
+//%//%//%//         thresh /=  pow(2, (_myfloat)(p->dog_nspo)) - 1.;
+//%//%//%//     }
+//%//%//%// 
+//%//%//%//     /** MEMORY ALLOCATION **/
+//%//%//%//     /** scale-space structure */
+//%//%//%//     struct sift_scalespace* s   = sift_malloc_scalespace_lowe_floatnspo(n_oct, p->fnspo, w, h, p->delta_min, p->sigma_min);
+//%//%//%//     struct sift_scalespace* d   = sift_malloc_scalespace_dog_from_scalespace(s);
+//%//%//%//     struct sift_scalespace* sx  = sift_malloc_scalespace_from_model(s);
+//%//%//%//     struct sift_scalespace* sy  = sift_malloc_scalespace_from_model(s);
+//%//%//%//     /** list-of-keypoints (Already allocated) */
+//%//%//%//     struct sift_keypoints* kA   = kk[0];  /* 3D (discrete) extrema   */
+//%//%//%//     struct sift_keypoints* kB   = kk[1];  /* passing the threshold on DoG  */
+//%//%//%//     struct sift_keypoints* kC   = kk[2];  /* interpolated 3D extrema (continuous) */
+//%//%//%//     struct sift_keypoints* kD   = kk[3];  /* passing the threshold on DoG  */
+//%//%//%//     struct sift_keypoints* kE   = kk[4];  /* passing OnEdge filter */
+//%//%//%//     struct sift_keypoints* kF   = kk[5];  /* image border */
+//%//%//%// 
+//%//%//%// 
+//%//%//%// 
+//%//%//%//     /** SCALE SPACE COMPUTATION ***************************************************/
+//%//%//%//     // Compute the interpolated image (not the seed) - an image with dmin and blur sin (not smin)
+//%//%//%//     int w_seed, h_seed;
+//%//%//%//     _myfloat* seed = compute_interpolated(x, w, h, p, &w_seed, &h_seed, flag_dct, flag_interp);
+//%//%//%// 
+//%//%//%// 
+//%//%//%// 
+//%//%//%// 
+//%//%//%// // 
+//%//%//%//     scalespace_compute_with_or_without_semigroup(s, x, w, h, p->sigma_in, flag_semigroup, flag_dct, flag_interp);
+//%//%//%//     if (flag_log == 1){
+//%//%//%//         scalespace_compute_LoG(s,d, flag_dct);
+//%//%//%//     }else{
+//%//%//%//         _myfloat kfact = pow(2, 1.0/(_myfloat)(p->dog_nspo)); // the equivalent factor in the definition of the DoG operator
+//%//%//%//         ///   WARNING - this uses the image at sigma to compute the image at kappa*sigma !!! (gradual is different)
+//%//%//%//         scalespace_compute_dog_controlled(s, d, kfact, flag_dct);
+//%//%//%//     }
+//%//%//%// 
+//%//%//%// 
+//%//%//%// 
+//%//%//%// 
+//%//%//%//     /** KEYPOINT DETECTION ***************************************************/
+//%//%//%// 
+//%//%//%// 
+//%//%//%//     keypoints_find_3d_discrete_extrema_epsilon(d, kA, p->n_ori, p->n_hist, p->n_bins, p->epsilon);
+//%//%//%//     keypoints_discard_with_low_response(kA, kB, 0.8*thresh);
+//%//%//%//     keypoints_interpolate_position_controlled(d, kB, kC, p->itermax, p->ofstMax_X, p->ofstMax_S, p->flag_jumpinscale, p->fnspo, p->sigma_min);
+//%//%//%//     keypoints_discard_with_low_response(kC, kD, thresh);
+//%//%//%//     keypoints_compute_edge_response(d,kD);
+//%//%//%//     keypoints_discard_on_edge( kD, ktemp, (p->C_edge+1)*(p->C_edge+1)/p->C_edge );
+//%//%//%//     (void)kE;
+//%//%//%//     (void)kF;
+//%//%//%// 
+//%//%//%//     /** scalespace structures*/
+//%//%//%//     ss[0] = s;
+//%//%//%//     ss[1] = d;
+//%//%//%//     ss[2] = sx;
+//%//%//%//     ss[3] = sy;
+//%//%//%//     return k;
+//%//%//%// }
+//%//%//%// 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 static void extract_patch_from_scalespace(_myfloat* list,
@@ -575,16 +643,52 @@ _myfloat* sift_anatomy_dense_patch(struct sift_keypoints* k,
 }
 
 
+// Memory allocation for the computation of one octave (with nspo+2 scales)
+struct sift_scalespace* sift_malloc_scalespace_dog_gradual_floatnspo_ENTIREOCTAVE(int ObjnOct,
+                                                       _myfloat ObjnSca,
+                                                       int im_w, int im_h,
+                                                       _myfloat delta_min, _myfloat sigma_min,
+                                                       int curr_o) // current coordinates
+{
+
+    //fprintf(stderr, " In malloc entireoctave  ObjnSca %f\n", ObjnSca );
+
+    int nOct = 1;
+    int nSca = (int)(ObjnSca)+2;
+    // normal
+    int* ws = xmalloc(nOct*sizeof(int));
+    int* hs = xmalloc(nOct*sizeof(int));
+    int* nScas = xmalloc(nOct*sizeof(int));
+    _myfloat* deltas = xmalloc(nOct*sizeof(_myfloat));
+    _myfloat** sigmas = xmalloc(nOct*sizeof(_myfloat*));
+
+    deltas[0] = delta_min * pow(2, curr_o);
+    ws[0] = (int)(im_w / (delta_min * pow(2, curr_o)) );
+    hs[0] = (int)(im_h / (delta_min * pow(2, curr_o)) );
+    _myfloat fsigma_min = sigma_min * pow(2, curr_o);
+    nScas[0] = nSca;
+    sigmas[0] = xmalloc(nScas[0]*sizeof(_myfloat));
+
+    for(int s=0;s<nSca;s++){ /* nSca images + 2 auxiliary images*/
+        sigmas[0][s] = fsigma_min*pow(2.0,(_myfloat)s / ObjnSca);
+        //fprintf(stderr, "------- ------- simulated s %i  scale %33.30f \n", s, sigmas[0][s]);
+        //fprintf(stderr, "------- ------- simulated scale %33.30f \n", sigmas[0][s]);
+    }
+
+    struct sift_scalespace* scalespace = sift_malloc_scalespace(nOct, deltas, ws, hs, nScas, sigmas);
+    xfree(deltas);
+    xfree(ws);
+    xfree(hs);
+    xfree(nScas);
+    xfree(sigmas[0]);
+    xfree(sigmas);
+    return scalespace;
+}
 
 
 
 
-
-
-
-
-
-
+// Minimal memory allocation for the gradual computation of one octave (Computing 3 scales)
 struct sift_scalespace* sift_malloc_scalespace_dog_gradual_floatnspo(int ObjnOct,
                                                        _myfloat ObjnSca,
                                                        int im_w, int im_h,
@@ -604,12 +708,14 @@ struct sift_scalespace* sift_malloc_scalespace_dog_gradual_floatnspo(int ObjnOct
     deltas[0] = delta_min * pow(2, curr_o);
     ws[0] = (int)(im_w / (delta_min * pow(2, curr_o)) );
     hs[0] = (int)(im_h / (delta_min * pow(2, curr_o)) );
-    _myfloat fsigma_min = sigma_min * pow(2, curr_o); 
+    _myfloat fsigma_min = sigma_min * pow(2, curr_o);
     nScas[0] = nSca;
     sigmas[0] = xmalloc(nScas[0]*sizeof(_myfloat));
     for(int s = -1; s <= 1; s++){
         sigmas[0][s+1] = fsigma_min*pow(2.0,(_myfloat)(s+curr_s)/ObjnSca);
-        //fprintf(stderr, "------- ------- simulated s %i  scale %f \n", s, sigmas[0][s+1]);
+        //if (s == 0){
+        //fprintf(stderr, "------- ------- simulated  scale %33.30f \n", sigmas[0][s+1]);
+        //}
     }
     struct sift_scalespace* scalespace = sift_malloc_scalespace(nOct, deltas, ws, hs, nScas, sigmas);
     xfree(deltas);
@@ -741,6 +847,10 @@ _myfloat* compute_interpolated(const _myfloat* in, int w, int h, struct sift_par
     return(out);
 }
 
+
+
+// Computes a one octave scale-space
+//   - images are computed from the interpolated image
 
 void compute_controlled_nosemi_dog_from_interpolated(_myfloat* in, int w_in, int h_in, _myfloat delta_in, _myfloat sigma_in,
                                                  struct sift_scalespace *d, _myfloat k, int flag_dct, int subfactor)
@@ -877,7 +987,6 @@ struct sift_keypoints* sift_anatomy_gradual(_myfloat* x, int w, int h,
     _myfloat thresh;
     if (flag_log){
         thresh = convert_threshold(p);
-       // thresh /= exp( M_LN2/( (_myfloat)(p->n_spo))) - 1; // TODO pour nsca float.
         thresh /=  pow(2, (_myfloat)(p->dog_nspo)) - 1.;
     }
     else{ // DoG then
@@ -917,30 +1026,45 @@ struct sift_keypoints* sift_anatomy_gradual(_myfloat* x, int w, int h,
                 // update scales
                 for(int s = 0 ; s < 3 ; s++){
                     d->octaves[0]->sigmas[s] = p->sigma_min*pow(2.0, o + (_myfloat)(is+s) / p->fnspo);
+        
+                   // if (s == 0){
+                   //     fprintf(stderr, "------- ------- simulated scale %33.30f \n", d->octaves[0]->sigmas[s]);
+                   // }
+
                 }
                 // the missing image
                 update_controlled_nosemi_dog_from_interpolated(seed, w_seed, h_seed, p->delta_min, p->sigma_in,
                                                                    d, factDoG, flag_dct, subfactor);
             }
 
-            //// Note Mauricio : plus rapide d'ecrire en tiff 
-            //// // DoG scalespace
-            //char name[FILENAME_MAX];
-            //sprintf(name, "grad_oct%04i_scale%04i", o, is+1); // warning - decalage indice
-            //print_sift_scalespace_rgb(d, name);
-            ////print_sift_scalespace_gray(d, name);
+       //     //// Note Mauricio : plus rapide d'ecrire en tiff 
+       //     //// // DoG scalespace
+       //     char name[FILENAME_MAX];
+       //     sprintf(name, "grad_oct%04i_scale%04i",  o, is+1); // warning - decalage indice
+       //     print_sift_scalespace_rgb(d, name);
+       //     //print_sift_scalespace_gray(d, name);
 
             if (p->itermax == 0){  // All discrete extrema
                 keypoints_find_3d_discrete_extrema_epsilon(d, ktmp, p->n_ori, p->n_hist, p->n_bins, p->epsilon);
             }else{
                 keypoints_find_3d_discrete_extrema_epsilon(d, kA, p->n_ori, p->n_hist, p->n_bins, p->epsilon);
-                keypoints_discard_with_low_response(kA, kB, 0.8*thresh);
-                keypoints_interpolate_position_controlled(d, kB, kC, p->itermax, p->ofstMax_X, p->ofstMax_S, 0, p->fnspo, pow(2,o)*p->sigma_min);
-                keypoints_discard_with_low_response(kC, kD, thresh);
-                keypoints_compute_edge_response(d,kD);
-                keypoints_discard_on_edge(kD, ktmp, (p->C_edge+1)*(p->C_edge+1)/p->C_edge);
+                keypoints_interpolate_position_controlled(d, kA, ktmp, p->itermax, p->ofstMax_X, p->ofstMax_S, 0, p->fnspo, pow(2,o)*p->sigma_min);
+                debug(" current scale = %i  / Number of detections: discrete=%i  interpolated=%i", is, kA->size, ktmp->size);
+
+               // // BEGIN COMMENT Following is the the normal flow of keypoint.
+               // keypoints_find_3d_discrete_extrema_epsilon(d, kA, p->n_ori, p->n_hist, p->n_bins, p->epsilon);
+               // keypoints_discard_with_low_response(kA, kB, 0.8*thresh);
+               // keypoints_interpolate_position_controlled(d, kB, kC, p->itermax, p->ofstMax_X, p->ofstMax_S, 0, p->fnspo, pow(2,o)*p->sigma_min);
+               // keypoints_discard_with_low_response(kC, kD, thresh);
+               // keypoints_compute_edge_response(d,kD);
+               // keypoints_discard_on_edge(kD, ktmp, (p->C_edge+1)*(p->C_edge+1)/p->C_edge);
+               // // END COMMENT.
+               // //
+
+
             }
 
+            // 20150612
             // update the index of octave and scale (by default all keypoints are in scale 1 (gradual implementation)).
             for(int ik = 0; ik < ktmp->size; ik++){
                 struct keypoint* key = ktmp->list[ik];
@@ -950,8 +1074,6 @@ struct sift_keypoints* sift_anatomy_gradual(_myfloat* x, int w, int h,
                 sift_add_keypoint_to_list(copy, k);
                 //fprintf(stderr, "DEBUG o = %i / is = %i  /////  k last element  o %i  s %i  \n ", o, is, k->list[k->size -1]->o, k->list[k->size -1]->s  );
             }
-            
-
 
             sift_free_keypoints(kA);
             sift_free_keypoints(kB);
@@ -966,6 +1088,226 @@ struct sift_keypoints* sift_anatomy_gradual(_myfloat* x, int w, int h,
     free(seed);
     return k;
 }
+
+
+
+// 
+//
+static void keypoints_only_in_given_octave(struct sift_keypoints *keysIn,
+                                           struct sift_keypoints *keysAccept,
+                                           int o)
+{
+    for( int k = 0; k < keysIn->size; k++){
+        struct keypoint *key = keysIn->list[k];
+        bool isAccepted = (key->o == o);
+        if (isAccepted == true){
+            struct keypoint *copy = sift_malloc_keypoint_from_model_and_copy(key);
+            sift_add_keypoint_to_list(copy, keysAccept);
+        }
+    }
+}
+
+
+//   based on gradual - the entire octaves are computed sequentially
+void sift_anatomy_gradual_check_extrema(_myfloat* x, int w, int h,
+                                        struct sift_keypoints* keysIn,
+                                        struct sift_keypoints* keysTested, // keypoints from keysIn that can be tested.
+                                        struct sift_keypoints* keysExtrema,
+                                        struct sift_keypoints* keysNotExtrema,
+                                        struct sift_parameters* p,
+                                        int flag_semigroup,
+                                        int flag_dct,
+                                        int flag_interp)
+{
+    int n_oct = number_of_octaves(w, h, p);
+
+    _myfloat thresh  = convert_threshold_DoG(p);
+
+    // Computation of the interpolated image
+    int w_seed, h_seed;
+    _myfloat* seed = compute_interpolated(x, w, h, p, &w_seed, &h_seed, flag_dct, flag_interp);
+
+    for(int o = 0; o < n_oct; o++){
+
+        // considering only the keypoints that are in the current octave
+        struct sift_keypoints* keysOct = sift_malloc_keypoints();
+        keypoints_only_in_given_octave(keysIn, keysOct, o);
+        struct sift_keypoints* keysOctExtrema = sift_malloc_keypoints();
+        struct sift_keypoints* keysOctNotExtrema = sift_malloc_keypoints();
+
+        struct sift_scalespace* d = sift_malloc_scalespace_dog_gradual_floatnspo_ENTIREOCTAVE(n_oct, p->fnspo ,w,h, p->delta_min,p->sigma_min, o);
+        int subfactor = pow(2, o);
+
+
+        // Compute single octave scale-space
+        _myfloat factDoG = pow(2, 1.0/(_myfloat)(p->dog_nspo));
+        compute_controlled_nosemi_dog_from_interpolated(seed, w_seed, h_seed, p->delta_min, p->sigma_in,
+                                                                d, factDoG, flag_dct, subfactor);
+
+        // Check the extrema
+        //keypoints_check_3d_discrete_extrema_epsilon_sphere(d, keysOct, keysOctExtrema, keysOctNotExtrema, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->discrete_sphere_r, p->discrete_sphere_dr);
+        //keypoints_confirm_extremum_present_in_ball(d, keysOct, keysOctExtrema, keysOctNotExtrema, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->ball_alpha, p->ball_beta);
+        keypoints_confirm_extremum_present_in_ball(d, keysOct, keysOctExtrema, keysOctNotExtrema, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->ball_r1, p->ball_r2, p->ball_r3);
+
+        // Update the keypoint octave index (by default all keypoints are in octave 0 (gradual implementation)).
+        for(int ik = 0; ik < keysOctExtrema->size; ik++){
+            struct keypoint* key = keysOctExtrema->list[ik];
+            // copy the keypoint to the list of confirmed extrema
+            struct keypoint* copy = sift_malloc_keypoint_from_model_and_copy(key);
+            sift_add_keypoint_to_list(copy, keysExtrema);
+            // copy the keypoint to the list of tested keypoints
+            struct keypoint* copy2 = sift_malloc_keypoint_from_model_and_copy(key);
+            sift_add_keypoint_to_list(copy2, keysTested);
+        }
+        for(int ik = 0; ik < keysOctNotExtrema->size; ik++){
+            struct keypoint* key = keysOctNotExtrema->list[ik];
+            // copy the keypoint to the list of keys not confirmed as extrema
+            struct keypoint* copy = sift_malloc_keypoint_from_model_and_copy(key);
+            sift_add_keypoint_to_list(copy, keysNotExtrema);
+            // copy the keypoint to the list of tested keypoints
+            struct keypoint* copy2 = sift_malloc_keypoint_from_model_and_copy(key);
+            sift_add_keypoint_to_list(copy2, keysTested);
+        }
+
+
+        // 
+        sift_free_keypoints(keysOctNotExtrema);
+        sift_free_keypoints(keysOctExtrema);
+        sift_free_keypoints(keysOct);
+        sift_free_scalespace(d);
+    }
+    free(seed);
+}
+
+
+
+//   
+struct sift_keypoints* sift_anatomy_gradual_ENTIREOCTAVE(_myfloat* x, int w, int h,
+                                            struct sift_parameters* p,
+                                            struct sift_scalespace* ss[4],
+                                            struct sift_keypoints* kk[6],
+                                            int flag_semigroup,
+                                            int flag_dct,
+                                            int flag_log,
+                                            int flag_interp)
+{
+    struct sift_keypoints* k = sift_malloc_keypoints();
+
+    int n_oct = number_of_octaves(w, h, p);
+
+    _myfloat thresh;
+    if (flag_log){
+        thresh = convert_threshold(p);
+        thresh /=  pow(2, (_myfloat)(p->dog_nspo)) - 1.;
+    }
+    else{ // DoG then
+        thresh = convert_threshold_DoG(p);
+    }
+
+    // Computation of the interpolated image
+    int w_seed, h_seed;
+    _myfloat* seed = compute_interpolated(x, w, h, p, &w_seed, &h_seed, flag_dct, flag_interp);
+
+
+    for(int o = 0; o < n_oct; o++){
+        
+        //struct sift_scalespace* d = sift_malloc_scalespace_dog_gradual_floatnspo(n_oct, p->fnspo ,w,h, p->delta_min,p->sigma_min, o, 1);
+        struct sift_scalespace* d = sift_malloc_scalespace_dog_gradual_floatnspo_ENTIREOCTAVE(n_oct, p->fnspo ,w,h, p->delta_min,p->sigma_min, o);
+        int subfactor = pow(2, o);
+
+        /** list-of-keypoints (Already allocated) */
+        struct sift_keypoints* kA = sift_malloc_keypoints();
+        struct sift_keypoints* kB = sift_malloc_keypoints();
+        struct sift_keypoints* kC = sift_malloc_keypoints();
+        struct sift_keypoints* kD = sift_malloc_keypoints();
+        struct sift_keypoints* kE = sift_malloc_keypoints();
+        //
+        struct sift_keypoints* ktmp = sift_malloc_keypoints(); // to update the octave and scale indices
+        
+
+
+        struct sift_keypoints* kExtrema = sift_malloc_keypoints();    // to update the octave and scale indices
+        struct sift_keypoints* kNotExtrema = sift_malloc_keypoints(); // to update the octave and scale indices
+
+
+        /** KEYPOINT DETECTION ***************************************************/
+        _myfloat factDoG = pow(2, 1.0/(_myfloat)(p->dog_nspo)); // the equivalent factor in the definition of the DoG operator
+        compute_controlled_nosemi_dog_from_interpolated(seed, w_seed, h_seed, p->delta_min, p->sigma_in,
+                                                                d, factDoG, flag_dct, subfactor);
+
+ //       //// Note Mauricio : plus rapide d'ecrire en tiff 
+ //       //// // DoG scalespace
+ //       char name[FILENAME_MAX];
+ //       sprintf(name, "grad_oct%04i_",  o);
+ //       print_sift_scalespace_rgb(d, name);
+ //       //print_sift_scalespace_gray(d, name);
+
+        if (p->itermax == 0){  // All discrete extrema
+            //keypoints_find_3d_discrete_extrema_epsilon(d, ktmp, p->n_ori, p->n_hist, p->n_bins, p->epsilon);
+            //keypoints_find_3d_discrete_extrema_epsilon_largervolume(d, ktmp, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->discrete_extrema_dR);
+
+            keypoints_find_3d_discrete_extrema_epsilon_sphere(d, ktmp, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->discrete_sphere_r, p->discrete_sphere_dr);
+
+
+ // //       // TEST - the check routine
+ // //           
+ // //           // keypoints_find_3d_discrete_extrema_epsilon_sphere(d, ktmp, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->discrete_sphere_r, p->discrete_sphere_dr);
+ // //           keypoints_find_3d_discrete_extrema_epsilon(d, ktmp, p->n_ori, p->n_hist, p->n_bins, p->epsilon);
+
+ // //            keypoints_check_3d_discrete_extrema_epsilon_sphere(d, ktmp, kExtrema, kNotExtrema, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->discrete_sphere_r, p->discrete_sphere_dr);
+
+ // //            fprintf(stderr, "test check sphere  nextrema:%i  checktrue:%i  checkfalse%i \n", ktmp->size, kExtrema->size, kNotExtrema->size);    
+
+
+
+
+        }else{
+            //fprintf(stderr, "before extraction \n");
+            //keypoints_find_3d_discrete_extrema_epsilon(d, kA, p->n_ori, p->n_hist, p->n_bins, p->epsilon);
+            //keypoints_find_3d_discrete_extrema_epsilon_largervolume(d, kA, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->discrete_extrema_dR);
+            keypoints_find_3d_discrete_extrema_epsilon_sphere(d, kA, p->n_ori, p->n_hist, p->n_bins, p->epsilon, p->discrete_sphere_r, p->discrete_sphere_dr);
+            //fprintf(stderr, "after extraction \n");
+            keypoints_discard_with_low_response(kA, kB, 0.8*thresh);
+            keypoints_interpolate_position_controlled(d, kB, kC, p->itermax, p->ofstMax_X, p->ofstMax_S, 0, p->fnspo, pow(2,o)*p->sigma_min);
+            keypoints_discard_with_low_response(kC, kD, thresh);
+            keypoints_compute_edge_response(d,kD);
+            keypoints_discard_on_edge(kD, ktmp, (p->C_edge+1)*(p->C_edge+1)/p->C_edge);
+        }
+
+        // 20150612
+        // update the keypoint octave index (by default all keypoints are in octave 0 (gradual implementation)).
+        for(int ik = 0; ik < ktmp->size; ik++){
+            struct keypoint* key = ktmp->list[ik];
+            key->o = o;
+            struct keypoint* copy = sift_malloc_keypoint_from_model_and_copy(key);
+            sift_add_keypoint_to_list(copy, k);
+        }
+
+
+        sift_free_keypoints(kA);
+        sift_free_keypoints(kB);
+        sift_free_keypoints(kC);
+        sift_free_keypoints(kD);
+        sift_free_keypoints(kE);
+        //
+        sift_free_keypoints(ktmp);
+        sift_free_scalespace(d);
+        
+        
+        
+        //
+        sift_free_keypoints(kExtrema);
+        sift_free_keypoints(kNotExtrema);
+    }
+    free(seed);
+    return k;
+}
+
+
+
+
+
+
 
 
 
@@ -1032,12 +1374,12 @@ struct sift_keypoints* sift_anatomy_gradual_auxil(_myfloat* x, int w, int h,
                 update_controlled_nosemi_dog_from_interpolated(seed, w_seed, h_seed, p->delta_min, p->sigma_in,
                                                                    d, factDoG, flag_dct, subfactor);
             }
-            //// Note Mauricio : plus rapide d'ecrire en tiff 
-            //// // DoG scalespace
-            //char name[FILENAME_MAX];
-            //sprintf(name, "grad_auxil_oct%04i_scale%04i", o, 1+is); // TEMP decalage d'indice.
-            //print_sift_scalespace_rgb(d, name);
-            ////print_sift_scalespace_gray(d, name);
+    //        //// Note Mauricio : plus rapide d'ecrire en tiff 
+    //        //// // DoG scalespace
+    //        char name[FILENAME_MAX];
+    //        sprintf(name, "grad_auxil_oct%04i_scale%04i", o, 1+is); // TEMP decalage d'indice.
+    //        //print_sift_scalespace_rgb(d, name);
+    //        print_sift_scalespace_gray(d, name);
 
             if (p->itermax == 0){  // All discrete extrema
                 keypoints_find_3d_discrete_extrema_epsilon(d, k, p->n_ori, p->n_hist, p->n_bins, p->epsilon);

@@ -30,7 +30,7 @@ The SIFT method is patented
         Filing date: Mar 6, 2000
         Issue date: Mar 23, 2004
         Application number: 09/519,89
-  
+
  These source codes are made available for the exclusive aim of serving as
  scientific tool to verify the soundness and completeness of the algorithm
  description. Compilation, execution and redistribution of this file may
@@ -111,10 +111,10 @@ void print_usage()
     fprintf(stderr, "          -----  EXTRA   dense_anatomy -----                               \n");
     fprintf(stderr, "                                                                           \n");
     fprintf(stderr, "   -ss_fnspo (3.00) float number of scales per octaves (-ss_nspo not used) \n");
-    fprintf(stderr, "   -flag_semigroup   BOOL (1)    semigroup (1) or direct (0)               \n");
-    fprintf(stderr, "   -flag_dct         BOOL (0)    dct (1) or discrete (0)                   \n");
+    fprintf(stderr, "   -flag_semigroup   BOOL (0)    semigroup (1) or direct (0)               \n");
+    fprintf(stderr, "   -flag_dct         BOOL (1)    dct (1) or discrete (0)                   \n");
     fprintf(stderr, "   -flag_log         BOOL (0)    normalized Laplacian (1) or DoG (0)       \n");
-    fprintf(stderr, "   -flag_interp     (0)  bilin (0) / DCT (1)/ bsplines (3,5,..,11)         \n");
+    fprintf(stderr, "   -flag_interp     (3)  bilin (0) / DCT (1)/ bsplines (3,5,..,11)         \n");
     fprintf(stderr, "   -itermax             5        max number of iterations                  \n");
     fprintf(stderr, "          NOTE: if itermax=0 then all the discrete extrema are output      \n");
     fprintf(stderr, "                              no threshold is applied                      \n");
@@ -124,6 +124,14 @@ void print_usage()
     fprintf(stderr, "   -ofstMax_S   (0.5)                 ... in scale                         \n");
     fprintf(stderr, "   -flag_jumpinscale   (0 in gradual / not an option in gradual)           \n");
     fprintf(stderr, "   -flag_bordereffect    BOOL (0 = standard lowe)                          \n");
+    fprintf(stderr, "   -discrete_extrema_dR (1) The sample is compared to the samples on the surface  \n");
+    fprintf(stderr, "                      of a volume containing (2 x halfR + 1)^3 samples     \n");
+    fprintf(stderr, "                                                                           \n");
+    fprintf(stderr, "   -discrete_sphere_r (1) The sample is compared to the samples on         \n");
+    fprintf(stderr, "                          the surface of a sphere  x halfR + 1)^3 samples  \n");
+    fprintf(stderr, "   -discrete_sphere_dr (1)                                                 \n");
+    fprintf(stderr, "                                                                           \n");
+
 }
 
 
@@ -196,7 +204,7 @@ static int parse_options(int argc, char** argv,
     isfound = pick_option(&argc, &argv, "ss_nspo", val);
     if (isfound ==  1){
         p->n_spo = atoi(val);
-        p->fnspo = atof(val); // redundant
+        p->fnspo = atof(val);
     }
     if (isfound == -1)    return EXIT_FAILURE;
 
@@ -250,6 +258,8 @@ static int parse_options(int argc, char** argv,
         strcpy(label_keys, val);
     }
     if (isfound == -1)    return EXIT_FAILURE;
+ 
+
 
     isfound = pick_option(&argc, &argv, "verb_ss", val);
     if (isfound ==  1){
@@ -285,10 +295,7 @@ static int parse_options(int argc, char** argv,
     if (isfound == -1)    return EXIT_FAILURE;
 
     isfound = pick_option(&argc, &argv, "ss_fnspo", val);
-    if (isfound ==  1){
-        p->fnspo = atof(val);
-        p->n_spo = atoi(val); // redundant
-    }
+    if (isfound ==  1)    p->fnspo = atof(val);
     if (isfound == -1)    return EXIT_FAILURE;
 
     //  controlling the interpolation
@@ -300,6 +307,17 @@ static int parse_options(int argc, char** argv,
     if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "ofstMax_S", val);
     if (isfound ==  1)    p->ofstMax_S = atof(val);
+    if (isfound == -1)    return EXIT_FAILURE;
+
+    // controlling the extraction of 3d discrete extrema
+    isfound = pick_option(&argc, &argv, "discrete_extrema_dR", val);
+    if (isfound ==  1)    p->discrete_extrema_dR = atoi(val);
+    if (isfound == -1)    return EXIT_FAILURE;
+    isfound = pick_option(&argc, &argv, "discrete_sphere_r", val);
+    if (isfound ==  1)    p->discrete_sphere_r = atof(val);
+    if (isfound == -1)    return EXIT_FAILURE;
+    isfound = pick_option(&argc, &argv, "discrete_sphere_dr", val);
+    if (isfound ==  1)    p->discrete_sphere_dr = atof(val);
     if (isfound == -1)    return EXIT_FAILURE;
 
     // check for unknown option call
@@ -383,7 +401,6 @@ void print_keypoints_and_vals(const struct sift_keypoints* keys, int dog_nspo)
 #else
         fprintf(stdout, "%f %f %f %f ", k->x, k->y, k->sigma, val);
 #endif
-        //
         // The 27 points in the cube.
         for(int n = 0; n < 27; n++){
             fprintf(stdout, "%33.30f ", k->neighbors[n]);
@@ -391,10 +408,97 @@ void print_keypoints_and_vals(const struct sift_keypoints* keys, int dog_nspo)
         // EXTRA - the interpolation offset for the last interpolation and grid position
         // k->s is always equal to 1 for the 'gradual' implementation // TODO correct the structure somewhere before output.
         fprintf(stdout, "%i %i %i %f %f %f ", k->i, k->j, k->s,  k->ofstX,  k->ofstY,  k->ofstS);
-        //
         fprintf(stdout, "\n");
     }
 }
+
+//TODO -- TO BE TESTED THOROUGHLY -- DOUBLE CHECK
+static void find_nearest_scalespace_sample(_myfloat x,           // keypoint position
+                                    _myfloat y,
+                                    _myfloat sigma,
+                                    int n_spo,             // scalespace parameters
+                                    _myfloat sigma_min,
+                                    _myfloat delta_min,
+                                    int *o,          // nearest sample coordinate 
+                                    int *s, 
+                                    int *i, 
+                                    int *j)
+{
+    int a = (int)(round( n_spo * log( sigma / sigma_min) /M_LN2  ));
+    *o = (a-1)/n_spo;
+    if (*o > -1){
+        *s = (a-1)%n_spo + 1;
+    }
+    else{
+        *o = 0;
+        *s = 0;
+    }
+    *i = (int)( x / ( delta_min * exp( *o * M_LN2)) + 0.5 );
+    *j = (int)( y / ( delta_min * exp( *o * M_LN2)) + 0.5 );
+}
+
+
+
+void read_keypoints_and_vals(struct sift_keypoints* keys,
+                             const char* name,
+                             int n_spo,
+                             _myfloat sigma_min,
+                             _myfloat delta_min)
+{
+    size_t buffer_size = 1024 * 1024;  // 1MB buffer for long lines.
+    char* buffer = (char*)xmalloc(buffer_size);   // note: we typecast malloc (this is C++).
+    FILE* stream = fopen(name,"r");
+    if ( !stream)
+        fatal_error("File \"%s\" not found.", name);
+    while(fgets(buffer, buffer_size, stream) != NULL){
+        int pos = 0;
+        int read = 0;
+        struct keypoint* key = sift_malloc_keypoint(8, 4, 36); // n_ori, n_hist, n_bins);
+
+        // read coordinates
+        float fx, fy, fsigma;
+        sscanf(buffer+pos,"%f  %f  %f  %n", &fx
+                                          , &fy
+                                          , &fsigma
+                                          , &read);
+        pos+=read;
+
+        // datatype convertion
+        _myfloat x = (_myfloat)fx;
+        _myfloat y = (_myfloat)fy;
+        _myfloat sigma = (_myfloat)fsigma;
+        
+        // find the nearest scalespace sample
+        int o, s, i ,j;
+        find_nearest_scalespace_sample(x,y,sigma,                   // keypoint coordinates
+                                       n_spo, sigma_min, delta_min, // scalespace parameters  
+                                       &o, &s, &i, &j);             // (output) coordinates of nearest sample.
+
+        // saving keypoint
+        key->x = x;
+        key->y = y;
+        key->sigma = sigma;
+        key->o = o;
+        key->s = s;
+        key->i = i;
+        key->j = j;
+
+        // read the rest of the line
+        // (to go to the next line)
+        // (MAYBE there's a clever way)
+        //
+        for(int i = 0; i < (27+6); i++){
+            float tmp;
+            sscanf(buffer+pos, "%f %n", &tmp, &read);
+            pos +=read;
+        }
+    }
+    xfree(buffer);
+}
+
+
+
+
 
 
 
@@ -425,10 +529,10 @@ int main(int argc, char **argv)
     strcpy(label_ss, "extra");
     strcpy(label_keys, "extra");
     // EXTRA DENSE
-    int flag_semigroup = 1;
+    int flag_semigroup = 0; // This has no effect anyway - everything is computed from the input image after interpolation
     int flag_dct = 1;
     int flag_log = 0;
-    int flag_interp = 0;
+    int flag_interp = 3;
     int flag_bordereffect = 0;
 
     // Parsing command line
@@ -459,7 +563,7 @@ int main(int argc, char **argv)
  //   struct sift_keypoints* k = sift_anatomy_gradual(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log);
     struct sift_keypoints* k;
     if (flag_bordereffect == 0){
-        k = sift_anatomy_gradual(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log, flag_interp);
+        k = sift_anatomy_gradual_ENTIREOCTAVE(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log, flag_interp);
     }
     else{
         k = sift_anatomy_gradual_auxil(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log, flag_interp);

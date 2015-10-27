@@ -72,6 +72,22 @@ struct sift_parameters
     _myfloat ofstMax_X; // for extrema interpolation (in space).
     _myfloat ofstMax_S; // for extrema interpolation (in the scale direction).
     int flag_jumpinscale;
+
+    // control the extraction of 3d discrete extrema
+    int discrete_extrema_dR;  // Each scale-space sample is compared to
+                              // the samples on the surface.
+
+
+    _myfloat discrete_sphere_r;  // define the sphere 
+    _myfloat discrete_sphere_dr;
+
+
+    _myfloat ball_r1;   // slightly different criterion to confirm the existence of an extremum
+    _myfloat ball_r2;
+    _myfloat ball_r3;
+
+    _myfloat ball_alpha; // same criterion but with normalized value. 
+    _myfloat ball_beta;
 };
 
 
@@ -115,7 +131,6 @@ int number_of_octaves(int w, int h, const struct sift_parameters* p);
 
 _myfloat convert_threshold(const struct sift_parameters* p);
 
-
 void scalespace_compute_dog(const struct sift_scalespace *s,
                                    struct sift_scalespace *d);
 
@@ -132,14 +147,61 @@ void keypoints_find_3d_discrete_extrema_epsilon(struct sift_scalespace* d,
                                                int n_bins,
                                                _myfloat epsilon);
 
+// The sample is compared to the sample on the surface of a (2 x halfR + 1)^3 volume.
+void keypoints_find_3d_discrete_extrema_epsilon_largervolume(struct sift_scalespace* d,
+                                               struct sift_keypoints* keys,
+                                               int n_ori,
+                                               int n_hist,
+                                               int n_bins,
+                                               _myfloat epsilon,
+                                               int dR);  
+
+// The sample is compared to the sample on the surface of a sphere defined by parameter r and dr.
+void keypoints_find_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* d,
+                                               struct sift_keypoints* keys,
+                                               int n_ori,
+                                               int n_hist,
+                                               int n_bins,
+                                               _myfloat epsilon,
+                                               _myfloat r,
+                                               _myfloat dr);
+
+// We check a set of keypoints by comparing the nearest discrete sample on the
+// surface of a sphere defined by parameter r and dr.
+void keypoints_check_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* d,
+                                               struct sift_keypoints* keysIn,
+                                               struct sift_keypoints* keysExtrema,
+                                               struct sift_keypoints* keysNotExtrema,
+                                               int n_ori,
+                                               int n_hist,
+                                               int n_bins,
+                                               _myfloat epsilon,
+                                               _myfloat r,
+                                               _myfloat dr);  
+
+
+// We check a set of keypoints by the scalespace values in the middle of the
+// ball to values that are on the surface of the ball
+void keypoints_confirm_extremum_present_in_ball(struct sift_scalespace* d,
+                                                struct sift_keypoints* keysIn,
+                                                struct sift_keypoints* keysExtrema,
+                                                struct sift_keypoints* keysNotExtrema,
+                                                int n_ori,
+                                                int n_hist,
+                                                int n_bins,
+                                                _myfloat epsilon,
+                                          //      _myfloat alpha,
+                                          //      _myfloat beta)
+                                                _myfloat r1,
+                                                _myfloat r2,
+                                                _myfloat r3);
+
+
 
 void keypoints_interpolate_position(struct sift_scalespace *d,
                                     struct sift_keypoints *keys,
                                     struct sift_keypoints *keysInterpol,
                                     int itermax);
-
-
-
 
 void keypoints_discard_with_low_response(struct sift_keypoints *keysIn,
                                                 struct sift_keypoints *keysAccept,

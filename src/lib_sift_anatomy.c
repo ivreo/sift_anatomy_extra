@@ -7,15 +7,13 @@ Version 20140911 (September 11th, 2014)
 
 This C ANSI source code is related to the IPOL publication
 
-    [1] "Anatomy of the SIFT Method." 
+    [1] "Anatomy of the SIFT Method."
         I. Rey Otero  and  M. Delbracio
         Image Processing Online, 2013.
         http://www.ipol.im/pub/algo/rd_anatomy_sift/
 
 An IPOL demo is available at
         http://www.ipol.im/pub/demo/rd_anatomy_sift/
-
-
 
 
 
@@ -267,7 +265,7 @@ void keypoints_find_3d_discrete_extrema(struct sift_scalespace* d,
                 }
             }
         }
-        
+
         // EXTRA - the 27 values (the center and its 26 neighbors on the 26 grid
         int neighbor_offsets27[27];
         n = 0;
@@ -325,13 +323,13 @@ void keypoints_find_3d_discrete_extrema(struct sift_scalespace* d,
                             key->neighbors[in] = imStack[s*w*h+i*w+j + neighbor_offsets27[in]];
                         }
                         sift_add_keypoint_to_list(key,keys);
-
                     }
                 }
             }
         }
     }
 }
+
 
 
 
@@ -437,15 +435,432 @@ void keypoints_find_3d_discrete_extrema_epsilon(struct sift_scalespace* d,
 
 
 
+void keypoints_find_3d_discrete_extrema_epsilon_largervolume(struct sift_scalespace* d,
+                                               struct sift_keypoints* keys,
+                                               int n_ori,
+                                               int n_hist,
+                                               int n_bins,
+                                               _myfloat epsilon,
+                                               int dR)  // The sample is compared to the sample on the surface of a (2 x halfR + 1)^3 volume.
+{
+    for(int o = 0; o < d->nOct; o++){
+
+        int ns = d->octaves[o]->nSca; // dimension of the image stack in the current octave
+        int w = d->octaves[o]->w;
+        int h = d->octaves[o]->h;
+        _myfloat delta = d->octaves[o]->delta; // intersample distance
+        _myfloat* imStack = d->octaves[o]->imStack;
+
+        // TODO normalize
+
+        // Precompute index offsets for the samples on the surface of the cube.
+        int nComp = 24*dR*dR +2; // number of comparisons // number of elements on the surface.
+        int neighbor_offsets[nComp];
+        int n = 0;
+        for (int ds = -dR; ds <= dR; ds++) {
+            for (int di = -dR; di <= dR; di++) {
+                for (int dj = -dR; dj <= dR; dj++) {
+                    if (ds == -dR || ds == dR || di == -dR || di == dR ||  dj == -dR || dj == dR) {
+                        neighbor_offsets[n] = (ds * h + di) * w + dj;
+                        //fprintf(stderr, " ---  n %i / offset %i \n ", n, neighbor_offsets[n] );
+                        n++;
+                    }
+                }
+            }
+        }
+
+
+        // Loop through the samples of the image stack (one octave)
+        for(int s = dR; s < ns-dR; s++){
+            for(int i = dR; i < h-dR; i++){
+                for(int j = dR; j < w-dR; j++){
+
+                    //fprintf(stderr, " --- loop through the samples in the image stack %i - %i - %i\n", s, i, j);
+
+                    const _myfloat* center = &imStack[s*w*h+i*w+j];
+                    const _myfloat center_value = *center;
+
+                    bool is_local_min = true;
+                    // An optimizing compiler will unroll this loop.
+                    for (int n = 0; n < nComp; n++) {
+                        if (center[neighbor_offsets[n]] - epsilon <= center_value) {
+                            is_local_min = false;
+                            break; // Can stop early if a smaller neighbor was found.
+                        }
+                    }
+                    bool is_local_max = true;
+                    // Can skip max check if center point was determined to be a local min.
+                    if (is_local_min) {
+                        is_local_max = false;
+                    } else {
+                        // An optimizing compiler will unroll this loop.
+                        for (int n = 0; n < nComp; n++) {
+                            if (center[neighbor_offsets[n]] + epsilon >= center_value) {
+                                is_local_max = false;
+                                break; // Can stop early if a larger neighbor was found.
+                            }
+                        }
+                    }
+                    if(is_local_max || is_local_min) { // if 3d discrete extrema, save a candidate keypoint
+                        struct keypoint* key = sift_malloc_keypoint(n_ori, n_hist, n_bins);
+                        key->i = i;
+                        key->j = j;
+                        key->s = s;
+                        key->o = o;
+                        key->x = delta*i;
+                        key->y = delta*j;
+                        key->sigma = d->octaves[o]->sigmas[s];
+                        key->val = imStack[s*w*h+i*w+j];
+                        //
+                        // j++; // skip the next pixel (it's not an extremum)
+                        // EXTRA - the 27 values (the center and its 26 neighbors on the 26 grid
+                        // TODO there must more than 27 values here
+                        // 
+                        //      
+                    //    for(int in = 0; in < 27; in++){
+                    //        key->neighbors[in] = imStack[s*w*h+i*w+j + neighbor_offsets27[in]];
+                    //    }
+                        for(int in = 0; in < 26; in++){
+                            //key->neighbors[in] = imStack[s*w*h+i*w+j + neighbor_offsets27[in]];
+                            key->neighbors[in] = imStack[s*w*h+i*w+j + neighbor_offsets[in]];
+                        }
+
+                        sift_add_keypoint_to_list(key,keys);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+void keypoints_find_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* d,
+                                               struct sift_keypoints* keys,
+                                               int n_ori,
+                                               int n_hist,
+                                               int n_bins,
+                                               _myfloat epsilon,
+                                               _myfloat r,
+                                               _myfloat dr)  // The sample is compared to the sample on the surface of a (2 x halfR + 1)^3 volume.
+{
+    for(int o = 0; o < d->nOct; o++){
+
+        int ns = d->octaves[o]->nSca; // dimension of the image stack in the current octave
+        int w = d->octaves[o]->w;
+        int h = d->octaves[o]->h;
+        _myfloat delta = d->octaves[o]->delta; // intersample distance
+        _myfloat* imStack = d->octaves[o]->imStack;
+
+        // Precompute index offsets for the samples on the surface of the cube.
+        int dR = (int)ceil(r+dr);
+        int H = 2*dR + 1;
+        int nInVol = H*H*H; // number of samples considered in the volume
+        int neighbor_offsets[nInVol];
+        int n = 0;
+        for (int ds = -dR; ds <= dR; ds++) {
+            for (int di = -dR; di <= dR; di++) {
+                for (int dj = -dR; dj <= dR; dj++) {
+                    // compute the sample distance to the candidate extrema
+                    _myfloat dist = sqrt( di*di + dj*dj + ds*ds );
+                    if ( (dist >= r) && (dist <= (r+dr) )) {
+                    //if (ds == -dR || ds == dR || di == -dR || di == dR ||  dj == -dR || dj == dR) {
+                        neighbor_offsets[n] = (ds * h + di) * w + dj;
+                        //fprintf(stderr, " ---  n %i / offset %i \n ", n, neighbor_offsets[n] );
+                        n++;
+                    }
+                }
+            }
+        }
+        int nComp = n; // number of comparisons
+        fprintf(stderr, "Number of comparisons = %i\n", nComp);
+
+
+        // Loop through the samples of the image stack (one octave)
+        for(int s = dR; s < ns-dR; s++){
+            for(int i = dR; i < h-dR; i++){
+                for(int j = dR; j < w-dR; j++){
+
+                    //fprintf(stderr, " --- loop through the samples in the image stack %i - %i - %i\n", s, i, j);
+
+                    const _myfloat* center = &imStack[s*w*h+i*w+j];
+                    const _myfloat center_value = *center;
+
+                    bool is_local_min = true;
+                    // An optimizing compiler will unroll this loop.
+                    for (int n = 0; n < nComp; n++) {
+                        if (center[neighbor_offsets[n]] - epsilon <= center_value) {
+                            is_local_min = false;
+                            break; // Can stop early if a smaller neighbor was found.
+                        }
+                    }
+                    bool is_local_max = true;
+                    // Can skip max check if center point was determined to be a local min.
+                    if (is_local_min) {
+                        is_local_max = false;
+                    } else {
+                        // An optimizing compiler will unroll this loop.
+                        for (int n = 0; n < nComp; n++) {
+                            if (center[neighbor_offsets[n]] + epsilon >= center_value) {
+                                is_local_max = false;
+                                break; // Can stop early if a larger neighbor was found.
+                            }
+                        }
+                    }
+                    if(is_local_max || is_local_min) { // if 3d discrete extrema, save a candidate keypoint
+                        struct keypoint* key = sift_malloc_keypoint(n_ori, n_hist, n_bins);
+                        key->i = i;
+                        key->j = j;
+                        key->s = s;
+                        key->o = o;
+                        key->x = delta*i;
+                        key->y = delta*j;
+                        key->sigma = d->octaves[o]->sigmas[s];
+                        key->val = imStack[s*w*h+i*w+j];
+                        //
+                        // j++; // skip the next pixel (it's not an extremum)
+                        // EXTRA - the 27 values (the center and its 26 neighbors on the 26 grid
+                        // TODO there must more than 27 values here
+                        // 
+                        //      
+                    //    for(int in = 0; in < 27; in++){
+                    //        key->neighbors[in] = imStack[s*w*h+i*w+j + neighbor_offsets27[in]];
+                    //    }
+                        for(int in = 0; in < 26; in++){
+                            //key->neighbors[in] = imStack[s*w*h+i*w+j + neighbor_offsets27[in]];
+                            key->neighbors[in] = imStack[s*w*h+i*w+j + neighbor_offsets[in]];
+                        }
+
+                        sift_add_keypoint_to_list(key,keys);
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 
 
 
 
+// We check a set of keypoints by comparing the nearest discrete sample on the
+// surface of a sphere defined by parameter r and dr.
+void keypoints_check_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* d,
+                                               struct sift_keypoints* keysIn,
+                                               struct sift_keypoints* keysExtrema,
+                                               struct sift_keypoints* keysNotExtrema,
+                                               int n_ori,
+                                               int n_hist,
+                                               int n_bins,
+                                               _myfloat epsilon,
+                                               _myfloat r,
+                                               _myfloat dr)
+{
+
+
+    int nComp=0; // number of value comparison to confirm that the point is an extrema
+
+    // load keypoints to check
+    for( int k = 0; k < keysIn->size; k++){
+
+        struct keypoint* key = keysIn->list[k];
+       // int o = key->o;
+        int s = key->s;
+        int i = key->i;
+        int j = key->j;
+
+
+        // Read the octave dimension -  note As far as 'd' is concerned, we are in the first octave.
+        int ns = d->octaves[0]->nSca; // dimension of the image stack in the current octave
+        int w = d->octaves[0]->w;
+        int h = d->octaves[0]->h;
+        _myfloat* imStack = d->octaves[0]->imStack;
+
+
+        // Precompute index offsets for the samples on the surface of the cube.
+        //
+        int dR = (int)ceil(r+dr);
+        int H = 2*dR + 1;
+        int nInVol = H*H*H; // number of samples considered in the volume
+        int neighbor_offsets[nInVol];
+        int n = 0;
+        for (int ds = -dR; ds <= dR; ds++) {
+            for (int di = -dR; di <= dR; di++) {
+                for (int dj = -dR; dj <= dR; dj++) {
+                    // compute the sample distance to the candidate extrema
+                    _myfloat dist = sqrt( di*di + dj*dj + ds*ds );
+                    if ( (dist >= r) && (dist <= (r+dr) )) {
+                        neighbor_offsets[n] = (ds * h + di) * w + dj;
+                        n++;
+                    }
+                }
+            }
+        }
+        nComp = n; // number of comparisons
 
 
 
+
+        // Test the extrema by comparing the nearest discrete sample to the
+        // samples on the surface of the sphere.
+        //
+        if ( s>=dR && s<ns-dR && i>=dR && i<h-dR && j>=dR && j<w-dR) {
+
+
+            const _myfloat* center = &imStack[s*w*h+i*w+j];
+            const _myfloat center_value = *center;
+
+            bool is_local_min = true;
+            // An optimizing compiler will unroll this loop.
+            for (int n = 0; n < nComp; n++) {
+                if (center[neighbor_offsets[n]] - epsilon <= center_value) {
+                    is_local_min = false;
+                    break; // Can stop early if a smaller neighbor was found.
+                }
+            }
+            bool is_local_max = true;
+            // Can skip max check if center point was determined to be a local min.
+            if (is_local_min) {
+                is_local_max = false;
+            } else {
+                // An optimizing compiler will unroll this loop.
+                for (int n = 0; n < nComp; n++) {
+                    if (center[neighbor_offsets[n]] + epsilon >= center_value) {
+                        is_local_max = false;
+                        break; // Can stop early if a larger neighbor was found.
+                    }
+                }
+            }
+            if(is_local_max || is_local_min) { // if 3d discrete extrema, save a candidate keypoint
+                struct keypoint* copy = sift_malloc_keypoint_from_model_and_copy(key);
+                sift_add_keypoint_to_list(copy, keysExtrema);
+            }else{
+                struct keypoint* copyOut = sift_malloc_keypoint_from_model_and_copy(key);
+                sift_add_keypoint_to_list(copyOut, keysNotExtrema);
+            }
+        }
+    }
+    fprintf(stderr, "number of comparisons to confirm it's an extrema %i \n", nComp);
+}
+
+
+
+
+
+
+// We check a set of keypoints by the scalespace values in the middle of the
+// ball to values that are on the surface of the ball
+void keypoints_confirm_extremum_present_in_ball(struct sift_scalespace* d,
+                                                struct sift_keypoints* keysIn,
+                                                struct sift_keypoints* keysExtrema,
+                                                struct sift_keypoints* keysNotExtrema,
+                                                int n_ori,
+                                                int n_hist,
+                                                int n_bins,
+                                                _myfloat epsilon,
+                                          //      _myfloat alpha,
+                                          //      _myfloat beta)
+                                                _myfloat r1,
+                                                _myfloat r2,
+                                                _myfloat r3)
+{
+
+    // Read the octave dimension
+    // THIS IS A TRICK: As far as 'd' is concerned, we are in the first octave.
+    // THIS IS A TRICK
+    // THIS IS A TRICK: All keypoints are in the current octave, i.e., the only octave actually in memory, i.e., the octave with index 0.
+    int ns = d->octaves[0]->nSca; // dimension of the image stack in the current octave
+    int w  = d->octaves[0]->w;
+    int h  = d->octaves[0]->h;
+    _myfloat* imStack = d->octaves[0]->imStack;
+    // THIS IS A TRICK: Now we can precompute the neighbors' positions for all keypoints
+
+//    assert( (alpha < beta ) && (beta < 1) );
+//    _myfloat r3 =  (ns-2) / 10.0; // corresponding to the height of the volume considered by Lowe
+//                                  // (in logscale)
+//    _myfloat r1 = alpha*r3;
+//    _myfloat r2 = beta*r3;
+    // Precompute index offsets for the samples on the surface of the cube.
+    int dR = (int)ceil(r3);
+    int H = 2*dR + 1;
+    fprintf(stderr,  "CONFIRMATION: ball dimension -  r1 %f  - r2 %f - r3 %f    H  %i  nspo %i \n", r1, r2, r3,  H, ns);
+    int nInVol = H*H*H; // number of samples in the large cuve the ball is in
+    int neighbor_in[nInVol];
+    int neighbor_out[nInVol];
+    int n_in = 0;
+    int n_out = 0;
+    for (int ds = -dR; ds <= dR; ds++) {
+        for (int di = -dR; di <= dR; di++) {
+            for (int dj = -dR; dj <= dR; dj++) {
+                // compute the sample distance to the candidate extrema
+                _myfloat dist2 = di*di + dj*dj + ds*ds;
+                // list of neighbors that are in the middle of the  ball
+                if (dist2 <= r1*r1) {
+                    neighbor_in[n_in] = (ds * h + di) * w + dj;
+                    n_in++;
+                }
+                // list of neighbors that are on the surface of the ball
+                if ((dist2 > r2*r2) && (dist2 <= r3*r3)) {
+                    neighbor_out[n_out] = (ds * h + di) * w + dj;
+                    n_out++;
+                }
+            }
+        }
+    }
+    assert( (n_in > 0) && (n_out > 0));
+
+    // Arrays in which will be stored the scalespace values inside the ball
+    _myfloat values_in[n_in];
+    _myfloat values_out[n_out];
+
+    // Load keypoints to check
+    for( int k = 0; k < keysIn->size; k++){
+
+        struct keypoint* key = keysIn->list[k];
+        //int o = key->o;
+        int s = key->s;
+        int i = key->i;
+        int j = key->j;
+        // DEBUG
+        //fprintf(stderr, "DEBUGin_confirm_extrema: Candidate keypoint (s,i,j) = (%i,%i,%i) \n", s,i,j);
+
+        // Confirm that an extremum is present on this point
+        if ( s>=dR && s<ns-dR && i>=dR && i<h-dR && j>=dR && j<w-dR){  // some points are inevitably discarded on the octave borders.
+
+            // DEBUG
+            //fprintf(stderr, "DEBUGin_confirm_extrema:   pass test  \n");
+
+            // Load values, compute mins and maxs
+            const _myfloat* center = &imStack[s*w*h+i*w+j];
+            for (int n = 0; n < n_in; n++){
+                values_in[n] = center[neighbor_in[n]];
+            }
+            _myfloat max_in =  array_max(values_in, n_in);
+            _myfloat min_in =  array_min(values_in, n_in);
+
+            for (int n = 0; n < n_out; n++){
+                values_out[n] = center[neighbor_out[n]];
+            }
+            _myfloat max_out =  array_max(values_out, n_out);
+            _myfloat min_out =  array_min(values_out, n_out);
+
+            bool is_local_max = (min_in > max_out);
+            bool is_local_min = (max_in > min_out);
+
+            if(is_local_max || is_local_min) { // if 3d discrete extrema, save a candidate keypoint
+                struct keypoint* copy = sift_malloc_keypoint_from_model_and_copy(key);
+                sift_add_keypoint_to_list(copy, keysExtrema);
+            }else{
+                struct keypoint* copyOut = sift_malloc_keypoint_from_model_and_copy(key);
+                sift_add_keypoint_to_list(copyOut, keysNotExtrema);
+            }
+        }
+    }
+
+    fprintf(stderr, "Number of samples used in the criteria:\n   in the middle:%i\n   on the surface: %i \n", n_in, n_out);
+
+}
 
 
 
@@ -1124,9 +1539,21 @@ struct sift_parameters* sift_assign_default_parameters()
     p->epsilon = FLT_EPSILON; // definition of a discrete extrema
     p->fnspo = 3.0;  // density of scales per octave (non integer !)
     // interpolation process.
-    p->ofstMax_X = 0.5;
-    p->ofstMax_S = 0.5;
+ //   p->ofstMax_X = 0.5;
+ //   p->ofstMax_S = 0.5;
+    p->ofstMax_X = 0.6;
+    p->ofstMax_S = 0.6;
     p->flag_jumpinscale = 1;
+    // controlling extraction of 3d extrema
+    p->discrete_extrema_dR = 1;
+    p->discrete_sphere_r = 1;
+    p->discrete_sphere_dr = 1;
+    // to confirm that there is an extremum
+    p->ball_r1 = 1;
+    p->ball_r2 = 2;
+    p->ball_r3 = 3;
+    p->ball_alpha = 0.24;
+    p->ball_alpha = 0.8;
 
     return p;
 }
@@ -1297,6 +1724,10 @@ void sift_anatomy_only_description(const _myfloat* x, int w, int h, const struct
 
 
 
+
+
+
+
 void sift_anatomy_orientation_and_description(const _myfloat* x,
                                               int w,
                                               int h,
@@ -1320,5 +1751,3 @@ void sift_anatomy_orientation_and_description(const _myfloat* x,
     sift_free_scalespace(sx);
     sift_free_scalespace(sy);
 }
-
-
