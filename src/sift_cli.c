@@ -103,14 +103,15 @@ void print_usage()
     fprintf(stderr, "                                                                           \n");
     fprintf(stderr, "   -verb_keys   label   flag to output the intermediary sets of keypoints  \n");
     fprintf(stderr, "   -verb_ss     label   flag to output the scalespaces (Gaussian and DoG)  \n");
+    fprintf(stderr, "   -bin_ss      label   flag to output the two scalespaces in binary files \n");
 }
 
 
 /**
  *
- * Output 
+ * Output
  *   -1 : malformed argument
- *    0 : option not found  
+ *    0 : option not found
  *    1 : option found
  */
 static int pick_option(int* c, char*** v, char* opt, char* val)
@@ -299,7 +300,6 @@ int main(int argc, char **argv)
     struct sift_scalespace **ss = xmalloc(4*sizeof(struct sift_scalespace*));
 
     /** Algorithm */
-    //struct sift_keypoints* k = sift_anatomy(x, w, h, p, ss, kk);
     struct sift_keypoints* k = sift_anatomy(xx, w, h, p, ss, kk);
 
     /** OUTPUT */

@@ -1,13 +1,13 @@
 /*
 IPOL SIFT
-Copyright (C) 2014, Ives Rey-Otero, CMLA ENS Cachan 
+Copyright (C) 2014, Ives Rey-Otero, CMLA ENS Cachan
 <ives.rey-otero@cmla.ens-cachan.fr>
 
 Version 20140911 (September 11th, 2014)
 
 This C ANSI source code is related to the IPOL publication
 
-    [1] "Anatomy of the SIFT Method." 
+    [1] "Anatomy of the SIFT Method."
         I. Rey Otero  and  M. Delbracio
         Image Processing Online, 2013.
         http://www.ipol.im/pub/algo/rd_anatomy_sift/
@@ -21,7 +21,7 @@ An IPOL demo is available at
 
 == Patent Warning and License =================================================
 
-The SIFT method is patented 
+The SIFT method is patented
 
     [3] "Method and apparatus for identifying scale invariant features
       in an image."
@@ -51,10 +51,10 @@ this program. If not, see
 */
 /**
  * @file sift.c
- * @brief [[MAIN]] The SIFT method 
+ * @brief [[MAIN]] The SIFT method
  *
  * @li basic SIFT transform applied to one image
- * @li verbose SIFT transform 
+ * @li verbose SIFT transform
  *
  * @author Ives Rey-Otero <ives.rey-otero@cmla.ens-cachan.fr>
  */
@@ -123,7 +123,6 @@ void print_usage()
     fprintf(stderr, "   -ofstMax_X   (0.5)   interpolation validity domain definition in space  \n");
     fprintf(stderr, "   -ofstMax_S   (0.5)                 ... in scale                         \n");
     fprintf(stderr, "   -flag_jumpinscale   (0 in gradual / not an option in gradual)           \n");
-    fprintf(stderr, "   -flag_bordereffect    BOOL (0 = standard lowe)                          \n");
     fprintf(stderr, "   -discrete_extrema_dR (1) The sample is compared to the samples on the surface  \n");
     fprintf(stderr, "                      of a volume containing (2 x halfR + 1)^3 samples     \n");
     fprintf(stderr, "                                                                           \n");
@@ -145,15 +144,16 @@ void print_usage()
     fprintf(stderr, "   -ball_alpha  |__ a normalized version  (NOTE: not used)                 \n");
     fprintf(stderr, "   -ball_beta   |                                                          \n");
     fprintf(stderr, "                                                                           \n");
+    fprintf(stderr, "                                                                           \n");
 
 }
 
 
 /**
  *
- * Output 
+ * Output
  *   -1 : malformed argument
- *    0 : option not found  
+ *    0 : option not found
  *    1 : option found
  */
 static int pick_option(int* c, char*** v, char* opt, char* val)
@@ -206,7 +206,6 @@ static int parse_options(int argc, char** argv,
                          int *flag_dct,
                          int *flag_log,
                          int *flag_interp,
-                         int *flag_bordereffect,
                          char* extrema_file,
                          char* outTested,
                          char* outExtrema,
@@ -276,7 +275,6 @@ static int parse_options(int argc, char** argv,
         strcpy(label_keys, val);
     }
     if (isfound == -1)    return EXIT_FAILURE;
- 
 
 
     isfound = pick_option(&argc, &argv, "verb_ss", val);
@@ -307,9 +305,6 @@ static int parse_options(int argc, char** argv,
     if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "flag_interp", val);
     if (isfound ==  1)    *flag_interp = atoi(val);
-    if (isfound == -1)    return EXIT_FAILURE;
-    isfound = pick_option(&argc, &argv, "flag_bordereffect", val);
-    if (isfound ==  1)    *flag_bordereffect = atoi(val);
     if (isfound == -1)    return EXIT_FAILURE;
 
     isfound = pick_option(&argc, &argv, "ss_fnspo", val);
@@ -519,15 +514,15 @@ static void save_keypoints_and_vals(const char* filename, const struct sift_keyp
 
 
 //TODO -- TO BE TESTED THOROUGHLY -- DOUBLE CHECK
-static void find_nearest_scalespace_sample(_myfloat x,           // keypoint position
+static void find_nearest_scalespace_sample(_myfloat x,     // keypoint position
                                     _myfloat y,
                                     _myfloat sigma,
                                     int n_spo,             // scalespace parameters
                                     _myfloat sigma_min,
                                     _myfloat delta_min,
-                                    int *o,          // nearest sample coordinate 
-                                    int *s, 
-                                    int *i, 
+                                    int *o,          // nearest sample coordinate
+                                    int *s,
+                                    int *i,
                                     int *j)
 {
     int a = (int)(round( n_spo * log( sigma / sigma_min) /M_LN2  ));
@@ -650,18 +645,16 @@ int main(int argc, char **argv)
     int flag_dct = 1;
     int flag_log = 0;
     int flag_interp = 3;
-    int flag_bordereffect = 0;
     // name of input file
     char extrema_file[256];   // TODO added proper test to handle 'file doesn't exist' situation
     char outTested[256];      // TODO added proper test to handle 'file doesn't exist' situation
     char outExtrema[256];     // TODO added proper test to handle 'file doesn't exist' situation
     char outNotExtrema[256];  // TODO added proper test to handle 'file doesn't exist' situation
-
+    
     // Parsing command line
     int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss,
                                       &flag_semigroup, &flag_dct, &flag_log, &flag_interp,
-                                      &flag_bordereffect,
-                                      extrema_file, outTested, outExtrema, outNotExtrema);
+                                      extrema_file, outTested, outExtrema, outNotExtrema);// check_extrema
     if (res == EXIT_FAILURE)
         return EXIT_FAILURE;
 
@@ -711,4 +704,7 @@ int main(int argc, char **argv)
 
     return EXIT_SUCCESS;
 }
+
+
+
 

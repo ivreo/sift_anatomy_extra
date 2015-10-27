@@ -208,3 +208,27 @@ void apply_rotation(_myfloat x, _myfloat y, _myfloat *rx, _myfloat *ry, _myfloat
     *rx = tx;
     *ry = ty;
 }
+
+
+
+
+
+// EXTRA
+void array_mean_and_std(const _myfloat* array, int length, _myfloat* mean, _myfloat* std)
+{
+    // mean value
+    _myfloat sum = 0;
+    for(int i = 0; i < length; i++){
+        sum += array[i];
+    }
+    *mean = sum/(_myfloat)length;
+
+    // standard deviation
+    sum = 0;
+    _myfloat tmp;
+    for(int i = 0; i < length; i++){
+        tmp = array[i]-(*mean);
+        sum += tmp*tmp; 
+    }
+    *std = sqrt(sum/(_myfloat)length);
+}

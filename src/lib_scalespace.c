@@ -297,3 +297,74 @@ struct sift_scalespace* sift_malloc_scalespace_dog_from_scalespace(struct sift_s
     }
     return dog;
 }
+
+
+
+// 20151020
+/** @brief Store the entire scale-space structure into a binary file
+ *
+ * first the information used to
+ *  - allocate memory for  the scalespace
+ *  - eventually find out what the parameters where (easy)
+ *
+ *
+ */
+void sift_write_scalespace_binary_file(FILE* fp, struct sift_scalespace* ss)
+{
+    fwrite(&ss->nOct, sizeof(int), 1, fp);
+    for(int i = 0; i < ss->nOct; i++){
+        struct octa* o = ss->octaves[i];
+        fwrite(&o->delta, sizeof(_myfloat), 1, fp);
+        fwrite(&o->w, sizeof(int), 1, fp);
+        fwrite(&o->h, sizeof(int), 1, fp);
+        fwrite(&o->nSca, sizeof(int), 1, fp);
+        fwrite(o->sigmas, sizeof(_myfloat), o->nSca, fp);
+    }
+    for(int i = 0; i < ss->nOct; i++){
+        struct octa* o = ss->octaves[i];
+        fwrite(o->imStack, sizeof(_myfloat), o->nSca*o->h*o->w, fp);
+    }
+}
+
+
+
+// 20151020
+/** @brief Read a scale-space binary file and allocate the memory
+ *
+ * first the information used to
+ *  - allocate memory for  the scalespace
+ *  - eventually find out what the parameters where (easy)
+ *
+ *
+ */
+struct sift_scalespace* sift_read_scalespace_binary_file(FILE* fp)
+{
+    int nOct;
+    fread(&nOct, sizeof(int), 1, fp);
+    int* ws  = xmalloc(nOct*sizeof(int));
+    int* hs  = xmalloc(nOct*sizeof(int));
+    int* nScas  = xmalloc(nOct*sizeof(int));
+    _myfloat* deltas  = xmalloc(nOct*sizeof(_myfloat));
+    _myfloat** sigmas = xmalloc(nOct*sizeof(_myfloat*));
+    for(int i = 0; i < nOct; i++){
+        fread(&deltas[i], sizeof(_myfloat), 1, fp);
+        fread(&ws[i], sizeof(int), 1, fp);
+        fread(&hs[i], sizeof(int), 1, fp);
+        fread(&nScas[i], sizeof(int), 1, fp);
+
+        sigmas[i] = xmalloc(nScas[i]*sizeof(_myfloat));
+        fread(sigmas[i], sizeof(_myfloat), nScas[i], fp);
+    }
+    // allocate memory
+    struct sift_scalespace* ss = sift_malloc_scalespace(nOct, deltas, ws, hs, nScas, sigmas);
+    // load scale-space
+    for(int i = 0; i < nOct; i++){
+        //debug("octave %i", i);
+        fread(ss->octaves[i]->imStack, sizeof(_myfloat), nScas[i]*hs[i]*ws[i], fp);
+    }
+    return ss;
+}
+
+
+
+

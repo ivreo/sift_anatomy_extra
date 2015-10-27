@@ -21,7 +21,7 @@ An IPOL demo is available at
 
 == Patent Warning and License =================================================
 
-The SIFT method is patented 
+The SIFT method is patented
 
     [3] "Method and apparatus for identifying scale invariant features
       in an image."
@@ -30,7 +30,7 @@ The SIFT method is patented
         Filing date: Mar 6, 2000
         Issue date: Mar 23, 2004
         Application number: 09/519,89
-  
+
  These source codes are made available for the exclusive aim of serving as
  scientific tool to verify the soundness and completeness of the algorithm
  description. Compilation, execution and redistribution of this file may
@@ -113,7 +113,6 @@ void print_usage()
     fprintf(stderr, "   -ss_fnspo (3.00) float number of scales per octaves (-ss_nspo not used) \n");
     fprintf(stderr, "   -flag_semigroup   BOOL (1)    semigroup (1) or direct (0)               \n");
     fprintf(stderr, "   -flag_dct         BOOL (0)    dct (1) or discrete (0)                   \n");
-    fprintf(stderr, "   -flag_log         BOOL (0)    normalized Laplacian (1) or DoG (0)       \n");
     fprintf(stderr, "   -flag_interp     (0)  bilin (0) / DCT (1)/ bsplines (3,5,..,11)         \n");
     fprintf(stderr, "   -itermax             5        max number of iterations                  \n");
     fprintf(stderr, "          NOTE: if itermax=0 then all the discrete extrema are output      \n");
@@ -182,7 +181,6 @@ static int parse_options(int argc, char** argv,
                          char* label_ss,
                          int *flag_semigroup,
                          int *flag_dct,
-                         int *flag_log,
                          int *flag_interp,
                          int *flag_bordereffect)
 {
@@ -264,9 +262,6 @@ static int parse_options(int argc, char** argv,
     if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "flag_dct", val);
     if (isfound ==  1)    *flag_dct = atoi(val);
-    if (isfound == -1)    return EXIT_FAILURE;
-    isfound = pick_option(&argc, &argv, "flag_log", val);
-    if (isfound ==  1)    *flag_log = atoi(val);
     if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "itermax", val);
     if (isfound ==  1)    p->itermax = atoi(val);
@@ -427,16 +422,12 @@ int main(int argc, char **argv)
     // EXTRA DENSE
     int flag_semigroup = 1;
     int flag_dct = 1;
-    int flag_log = 0;
     int flag_interp = 0;
     int flag_bordereffect = 0;
 
     // Parsing command line
-    //int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss);
-  //  int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss,
-  //                                    &flag_semigroup, &flag_dct, &flag_log);
     int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss,
-                                      &flag_semigroup, &flag_dct, &flag_log, &flag_interp, &flag_bordereffect);
+                                      &flag_semigroup, &flag_dct, &flag_interp, &flag_bordereffect);
     if (res == EXIT_FAILURE)
         return EXIT_FAILURE;
 
@@ -456,13 +447,12 @@ int main(int argc, char **argv)
     struct sift_scalespace **ss = (sift_scalespace **)xmalloc(4*sizeof(struct sift_scalespace*));
 
     /** Algorithm */
- //   struct sift_keypoints* k = sift_anatomy_gradual(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log);
     struct sift_keypoints* k;
     if (flag_bordereffect == 0){
-        k = sift_anatomy_gradual(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log, flag_interp);
+        k = sift_anatomy_gradual(x, w, h, p, ss, kk, flag_dct, flag_interp);
     }
     else{
-        k = sift_anatomy_gradual_auxil(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log, flag_interp);
+        k = sift_anatomy_gradual_auxil(x, w, h, p, ss, kk, flag_dct, flag_interp);
     }
 
     /** OUTPUT */

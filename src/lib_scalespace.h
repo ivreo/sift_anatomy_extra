@@ -96,4 +96,25 @@ struct sift_scalespace* sift_malloc_scalespace_lowe(int nOct,  /* # of octaves  
                                          _myfloat sigma_min);    /* minimal scale in each octave (relatively to the sampling rate) */
 
 
+// 20151020
+/** @brief Store the entire scale-space structure into a binary file
+ *
+ *
+ */
+void sift_write_scalespace_binary_file(FILE* fp, struct sift_scalespace* ss);
+
+
+// 20151020
+/** @brief Store the entire scale-space structure into a binary file
+ *
+ *
+ */
+struct sift_scalespace* sift_read_scalespace_binary_file(FILE* fp);
+
+
+
 #endif
+
+
+
+

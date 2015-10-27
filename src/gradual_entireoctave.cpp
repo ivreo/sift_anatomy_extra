@@ -113,7 +113,6 @@ void print_usage()
     fprintf(stderr, "   -ss_fnspo (3.00) float number of scales per octaves (-ss_nspo not used) \n");
     fprintf(stderr, "   -flag_semigroup   BOOL (0)    semigroup (1) or direct (0)               \n");
     fprintf(stderr, "   -flag_dct         BOOL (1)    dct (1) or discrete (0)                   \n");
-    fprintf(stderr, "   -flag_log         BOOL (0)    normalized Laplacian (1) or DoG (0)       \n");
     fprintf(stderr, "   -flag_interp     (3)  bilin (0) / DCT (1)/ bsplines (3,5,..,11)         \n");
     fprintf(stderr, "   -itermax             5        max number of iterations                  \n");
     fprintf(stderr, "          NOTE: if itermax=0 then all the discrete extrema are output      \n");
@@ -123,7 +122,6 @@ void print_usage()
     fprintf(stderr, "   -ofstMax_X   (0.5)   interpolation validity domain definition in space  \n");
     fprintf(stderr, "   -ofstMax_S   (0.5)                 ... in scale                         \n");
     fprintf(stderr, "   -flag_jumpinscale   (0 in gradual / not an option in gradual)           \n");
-    fprintf(stderr, "   -flag_bordereffect    BOOL (0 = standard lowe)                          \n");
     fprintf(stderr, "   -discrete_extrema_dR (1) The sample is compared to the samples on the surface  \n");
     fprintf(stderr, "                      of a volume containing (2 x halfR + 1)^3 samples     \n");
     fprintf(stderr, "                                                                           \n");
@@ -190,9 +188,7 @@ static int parse_options(int argc, char** argv,
                          char* label_ss,
                          int *flag_semigroup,
                          int *flag_dct,
-                         int *flag_log,
-                         int *flag_interp,
-                         int *flag_bordereffect)
+                         int *flag_interp)
 {
     int isfound;
     char val[128];
@@ -275,9 +271,6 @@ static int parse_options(int argc, char** argv,
     isfound = pick_option(&argc, &argv, "flag_dct", val);
     if (isfound ==  1)    *flag_dct = atoi(val);
     if (isfound == -1)    return EXIT_FAILURE;
-    isfound = pick_option(&argc, &argv, "flag_log", val);
-    if (isfound ==  1)    *flag_log = atoi(val);
-    if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "itermax", val);
     if (isfound ==  1)    p->itermax = atoi(val);
     if (isfound == -1)    return EXIT_FAILURE;
@@ -289,9 +282,6 @@ static int parse_options(int argc, char** argv,
     if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "flag_interp", val);
     if (isfound ==  1)    *flag_interp = atoi(val);
-    if (isfound == -1)    return EXIT_FAILURE;
-    isfound = pick_option(&argc, &argv, "flag_bordereffect", val);
-    if (isfound ==  1)    *flag_bordereffect = atoi(val);
     if (isfound == -1)    return EXIT_FAILURE;
 
     isfound = pick_option(&argc, &argv, "ss_fnspo", val);
@@ -531,16 +521,14 @@ int main(int argc, char **argv)
     // EXTRA DENSE
     int flag_semigroup = 0; // This has no effect anyway - everything is computed from the input image after interpolation
     int flag_dct = 1;
-    int flag_log = 0;
     int flag_interp = 3;
-    int flag_bordereffect = 0;
 
     // Parsing command line
     //int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss);
   //  int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss,
   //                                    &flag_semigroup, &flag_dct, &flag_log);
     int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss,
-                                      &flag_semigroup, &flag_dct, &flag_log, &flag_interp, &flag_bordereffect);
+                                      &flag_semigroup, &flag_dct, &flag_interp);
     if (res == EXIT_FAILURE)
         return EXIT_FAILURE;
 
@@ -560,36 +548,10 @@ int main(int argc, char **argv)
     struct sift_scalespace **ss = (sift_scalespace **)xmalloc(4*sizeof(struct sift_scalespace*));
 
     /** Algorithm */
- //   struct sift_keypoints* k = sift_anatomy_gradual(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log);
-    struct sift_keypoints* k;
-    if (flag_bordereffect == 0){
-        k = sift_anatomy_gradual_ENTIREOCTAVE(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log, flag_interp);
-    }
-    else{
-        k = sift_anatomy_gradual_auxil(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_log, flag_interp);
-    }
+    struct sift_keypoints* k = sift_anatomy_gradual_ENTIREOCTAVE(x, w, h, p, ss, kk, flag_semigroup, flag_dct, flag_interp);
 
     /** OUTPUT */
-    //int flag = flagverb_keys + 1;
-    //sift_print_keypoints(k, flag);
-    //sift_print_keypoints(k, 0);
-    //print_keypoints_and_vals(k, p->n_spo);
     print_keypoints_and_vals(k, p->dog_nspo);
-    // With normalized value (consistent with DoG threshold for nspo = 3
-
-   // char name[FILENAME_MAX];
-    if(flagverb_keys == 1){
-       // sprintf(name,"extra_NES_%s.txt",label_keys);              sift_save_keypoints(kk[0], name, 0);
-       // sprintf(name,"extra_DoGSoftThresh_%s.txt",label_keys);    sift_save_keypoints(kk[1], name, 0);
-       // sprintf(name,"extra_ExtrInterp_%s.txt",label_keys);       sift_save_keypoints(kk[2], name, 0);
-       // sprintf(name,"extra_DoGThresh_%s.txt",label_keys);        sift_save_keypoints(kk[3], name, 0);
-       // sprintf(name,"extra_OnEdgeResp_%s.txt",label_keys);       sift_save_keypoints(kk[4], name, 0);
-       // sprintf(name,"extra_FarFromBorder_%s.txt",label_keys);    sift_save_keypoints(kk[5], name, 0);
-    }
-    if (flagverb_ss == 1){
-       // sprintf(name,"scalespace_%s",label_ss);     print_sift_scalespace_gray_nearestneighbor(ss[0],name);
-       // sprintf(name,"DoG_%s",label_ss);            print_sift_scalespace_rgb(ss[1],name);
-    }
 
     /* memory deallocation */
     xfree(x);

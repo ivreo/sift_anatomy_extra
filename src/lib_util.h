@@ -1,5 +1,5 @@
 #ifndef _LIB_UTIL_H_
-#define _LIB_UTIL_H_ 
+#define _LIB_UTIL_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,5 +83,14 @@ _myfloat modulus(_myfloat x, _myfloat y);
 
 // Multiply the rotation matric R_alpha with [x,y]^T
 void apply_rotation(_myfloat x, _myfloat y, _myfloat *rx, _myfloat *ry, _myfloat alpha);
+
+// EXTRA
+//
+// EXTRA
+
+// mean and standard deviation  sqrt( sum (value - mean)^2 / length ) of an
+// array
+//
+void array_mean_and_std(const _myfloat* array, int length, _myfloat* mean, _myfloat* std);
 
 #endif // _LIB_UTIL_H_

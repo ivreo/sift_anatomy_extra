@@ -97,6 +97,7 @@ void scalespace_compute(struct sift_scalespace* ss,
                         int im_w,
                         int im_h,
                         _myfloat sigma_in)
+//
 {
     // seed image
     _myfloat delta_min = ss->octaves[0]->delta;
@@ -698,6 +699,7 @@ void keypoints_check_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* 
             }
         }
         nComp = n; // number of comparisons
+        
 
 
 
@@ -759,8 +761,6 @@ void keypoints_confirm_extremum_present_in_ball(struct sift_scalespace* d,
                                                 int n_hist,
                                                 int n_bins,
                                                 _myfloat epsilon,
-                                          //      _myfloat alpha,
-                                          //      _myfloat beta)
                                                 _myfloat r1,
                                                 _myfloat r2,
                                                 _myfloat r3)
@@ -768,7 +768,6 @@ void keypoints_confirm_extremum_present_in_ball(struct sift_scalespace* d,
 
     // Read the octave dimension
     // THIS IS A TRICK: As far as 'd' is concerned, we are in the first octave.
-    // THIS IS A TRICK
     // THIS IS A TRICK: All keypoints are in the current octave, i.e., the only octave actually in memory, i.e., the octave with index 0.
     int ns = d->octaves[0]->nSca; // dimension of the image stack in the current octave
     int w  = d->octaves[0]->w;
@@ -781,40 +780,67 @@ void keypoints_confirm_extremum_present_in_ball(struct sift_scalespace* d,
 //                                  // (in logscale)
 //    _myfloat r1 = alpha*r3;
 //    _myfloat r2 = beta*r3;
+
+    FILE* fin = fopen("map_inside.txt", "w");
+    FILE* fout = fopen("map_outside.txt", "w");
+    FILE* fall = fopen("map_all.txt", "w");
+
     // Precompute index offsets for the samples on the surface of the cube.
     int dR = (int)ceil(r3);
     int H = 2*dR + 1;
     fprintf(stderr,  "CONFIRMATION: ball dimension -  r1 %f  - r2 %f - r3 %f    H  %i  nspo %i \n", r1, r2, r3,  H, ns);
-    int nInVol = H*H*H; // number of samples in the large cuve the ball is in
-    int neighbor_in[nInVol];
-    int neighbor_out[nInVol];
+    int n_cube = H*H*H; // number of samples in the large cuve the ball is in
+    //
+    int* neighbor_in = xmalloc(n_cube*sizeof(int));
+    int* neighbor_out = xmalloc(n_cube*sizeof(int));
+    int* neighbor_all = xmalloc(n_cube*sizeof(int));
+    //
     int n_in = 0;
     int n_out = 0;
+    int n_all = 0;
     for (int ds = -dR; ds <= dR; ds++) {
         for (int di = -dR; di <= dR; di++) {
             for (int dj = -dR; dj <= dR; dj++) {
                 // compute the sample distance to the candidate extrema
                 _myfloat dist2 = di*di + dj*dj + ds*ds;
                 // list of neighbors that are in the middle of the  ball
-                if (dist2 <= r1*r1) {
+                if (dist2 < r1*r1) {
                     neighbor_in[n_in] = (ds * h + di) * w + dj;
                     n_in++;
+                    // map
+                    fprintf(fin, "%i %i %i \n", ds, di, dj);
                 }
                 // list of neighbors that are on the surface of the ball
-                if ((dist2 > r2*r2) && (dist2 <= r3*r3)) {
+                if ((dist2 >= r2*r2) && (dist2 < r3*r3)) {
                     neighbor_out[n_out] = (ds * h + di) * w + dj;
                     n_out++;
+                    // map
+                    fprintf(fout, "%i %i %i \n", ds, di, dj);
                 }
+                neighbor_all[n_all] = (ds * h + di) * w + dj;
+                n_all++;
+                fprintf(fall, "%i %i %i \n", ds, di, dj);
             }
         }
     }
+    fprintf(stderr, "DEBUG after setting up the neighbors positions\n");
     assert( (n_in > 0) && (n_out > 0));
 
-    // Arrays in which will be stored the scalespace values inside the ball
-    _myfloat values_in[n_in];
-    _myfloat values_out[n_out];
+    fclose(fout);
+    fclose(fin);
+    fclose(fall);
 
-    // Load keypoints to check
+    // Arrays with the scalespace values surrounding a keypoint.
+    _myfloat values_in[n_in];     // - inside ball
+    _myfloat values_out[n_out];   // - on the ball surface
+    _myfloat values_all[n_all];   // - the entire cube
+
+    // Same thing (scalespace values in the neighborhood) for all keypoints.
+    _myfloat* all_values_in  = xmalloc(n_in*  (keysIn->size) *sizeof(_myfloat));
+    _myfloat* all_values_out = xmalloc(n_out* (keysIn->size) *sizeof(_myfloat));
+    _myfloat* all_values_all = xmalloc(n_all* (keysIn->size) *sizeof(_myfloat));
+
+    int n_test = -1;  // number of keypoints actually tested (not discarded because of being too close to the border).
     for( int k = 0; k < keysIn->size; k++){
 
         struct keypoint* key = keysIn->list[k];
@@ -828,38 +854,123 @@ void keypoints_confirm_extremum_present_in_ball(struct sift_scalespace* d,
         // Confirm that an extremum is present on this point
         if ( s>=dR && s<ns-dR && i>=dR && i<h-dR && j>=dR && j<w-dR){  // some points are inevitably discarded on the octave borders.
 
-            // DEBUG
-            //fprintf(stderr, "DEBUGin_confirm_extrema:   pass test  \n");
+            n_test +=1;
 
-            // Load values, compute mins and maxs
+            // Load values, compute mins, maxs, means and stds.
             const _myfloat* center = &imStack[s*w*h+i*w+j];
             for (int n = 0; n < n_in; n++){
                 values_in[n] = center[neighbor_in[n]];
             }
             _myfloat max_in =  array_max(values_in, n_in);
             _myfloat min_in =  array_min(values_in, n_in);
+            _myfloat mean_in, std_in;
+            array_mean_and_std(values_in, n_in, &mean_in, &std_in);
 
             for (int n = 0; n < n_out; n++){
                 values_out[n] = center[neighbor_out[n]];
             }
             _myfloat max_out =  array_max(values_out, n_out);
             _myfloat min_out =  array_min(values_out, n_out);
+            _myfloat mean_out, std_out;
+            array_mean_and_std(values_out, n_out, &mean_out, &std_out);
 
-            bool is_local_max = (min_in > max_out);
-            bool is_local_min = (max_in > min_out);
+            // for visualisation only - not used in criteria
+            for (int n = 0; n < n_all; n++){
+                values_all[n] = center[neighbor_all[n]];
+            }
 
-            if(is_local_max || is_local_min) { // if 3d discrete extrema, save a candidate keypoint
+            // criterion
+            //bool is_local_max = (min_in > max_out);
+            //bool is_local_min = (max_in < min_out);
+
+            // denoised criterion (this is not exactly Mauricio's since the values on the surface are not smoothed locally).
+            //bool is_local_max = (mean_in > max_out);
+            //bool is_local_min = (mean_in < min_out);
+
+            // JM criterion
+            bool is_local_max = (max_in > max_out);
+            bool is_local_min = (min_in < min_out);
+
+            if(is_local_max || is_local_min) { // saving the keypoint in the appropriate list of keypoint
                 struct keypoint* copy = sift_malloc_keypoint_from_model_and_copy(key);
                 sift_add_keypoint_to_list(copy, keysExtrema);
             }else{
                 struct keypoint* copyOut = sift_malloc_keypoint_from_model_and_copy(key);
                 sift_add_keypoint_to_list(copyOut, keysNotExtrema);
             }
+
+            // Record the surrounding for all keypoints.
+            // - in the middle.
+            for(int n = 0; n < n_in; n++){
+                all_values_in[n_test*n_in+n] = values_in[n];
+            }
+            // - on the surface of the ball.
+            for(int n = 0; n < n_out; n++){
+                all_values_out[n_test*n_out+n] = values_out[n];
+            }
+            // - in the entire surrounding cube.
+            for(int n = 0; n < n_all; n++){
+                all_values_all[n_test*n_all+n] = values_all[n];
+            }
         }
     }
-
     fprintf(stderr, "Number of samples used in the criteria:\n   in the middle:%i\n   on the surface: %i \n", n_in, n_out);
 
+
+    // BEGIN SAVE DATA
+    char name[1024*1024];
+    FILE* f;
+    // save in binary file
+    sprintf(name, "all_values_inside.bin");
+    f = fopen(name, "wb");
+    fwrite(all_values_in, sizeof(_myfloat), n_test*n_in , f);
+    fclose(f);
+
+    sprintf(name, "all_values_outside.bin");
+    f = fopen(name, "wb");
+    fwrite(all_values_out, sizeof(_myfloat), n_test*n_out , f);
+    fclose(f);
+
+    // save in ascii file
+    // - in
+    sprintf(name, "all_values_inside.txt");
+    f = fopen(name, "w");
+    for (int k = 0; k< n_test; k++){
+        for (int n = 0; n < n_in; n++){
+            fprintf(f, "%32.30f ", all_values_in[k*n_in+n]);
+        }
+        fprintf(f, "\n");
+    }
+    fclose(f);
+    // - out
+    sprintf(name, "all_values_outside.txt");
+    f = fopen(name, "w");
+    for (int k = 0; k< n_test; k++){
+        for (int n = 0; n < n_out; n++){
+            fprintf(f, "%32.30f ", all_values_out[k*n_out+n]);
+        }
+        fprintf(f, "\n");
+    }
+    fclose(f);
+    // - all
+    sprintf(name, "all_values_all.txt");
+    f = fopen(name, "w");
+    for (int k = 0; k< n_test; k++){
+        for (int n = 0; n < n_all; n++){
+            fprintf(f, "%32.30f ", all_values_all[k*n_all+n]);
+        }
+        fprintf(f, "\n");
+    }
+    fclose(f);
+    // END SAVE DATA
+
+    free(all_values_in);
+    free(all_values_out);
+    free(all_values_all);
+
+    free(neighbor_in);
+    free(neighbor_out);
+    free(neighbor_all);
 }
 
 
@@ -1543,6 +1654,7 @@ struct sift_parameters* sift_assign_default_parameters()
  //   p->ofstMax_S = 0.5;
     p->ofstMax_X = 0.6;
     p->ofstMax_S = 0.6;
+
     p->flag_jumpinscale = 1;
     // controlling extraction of 3d extrema
     p->discrete_extrema_dR = 1;
