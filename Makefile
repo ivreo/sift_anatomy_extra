@@ -1,7 +1,8 @@
 # Copyright 2014 Ives Rey-Otero <ivesreyotero@gmail.com>
 
 # compilers configuration
-CC = gcc
+#CC = gcc
+CC = clang
 OFLAGS = -g -O3
 LIBS = -lpng -L/usr/local/lib -lm 
 #-lquadmath   -ltcmalloc
@@ -56,7 +57,7 @@ match= $(BINMATCH)
 demo= $(BINDEMO)
 #default: $(OBJDIR) $(BINDIR) $(sift) $(match) $(demo)
 #extra= $(BINDIR) $(BINDIR)/match_cli_ellipse $(BINDIR)/normalized_patch $(BINDIR)/find_orientation_and_describe_keys $(BINDIR)/extra_sift_cli $(BINDIR)/gradual
-extra= $(BINDIR) $(BINDIR)/gradual  $(BINDIR)/extra_sift_cli #$(BINDIR)/extra_sift_cli_extrema_patches
+extra= $(BINDIR) $(BINDIR)/gradual  $(BINDIR)/gradual_entireoctave  $(BINDIR)/gradual_check_extrema  $(BINDIR)/extra_sift_cli   $(BINDIR)/grab_ss_neighborhood $(BINDIR)/check_extremum_in_cube $(BINDIR)/check_extrema_in_scalespace   #$(BINDIR)/extra_sift_cli_extrema_patches
 default: $(OBJDIR) $(BINDIR) $(sift) $(match) $(demo) $(extra)
 
 #---------------------------------------------------------------
@@ -153,8 +154,9 @@ CFLAGS2 = -Wno-write-strings -std=c99 -D_POSIX_C_SOURCE=200809L # -pedantic -Wer
 $(OBJDIR)/iio.o :  $(SRCDIR)/iio.c
 	$(CC) $(CFLAGS2) $(OFLAGS) -c -o $@ $^
 
-CPP = g++
-#CPP = clang++
+#CPP = g++
+CPP = clang++
+
 CPPFLAGS = -Wall -Wno-write-strings -D_POSIX_C_SOURCE=200809L  # -pedantic -Werror
 $(OBJDIR)/io_exr.o : $(SRCDIR)/io_exr.cpp
 	$(CPP) $(CPPFLAGS) $(OFLAGS) -c -o $@ $^ -I/usr/include/OpenEXR
@@ -180,7 +182,28 @@ $(BINDIR)/extra_sift_cli : $(SRCDIR)/extra_sift_cli.cpp $(OBJ) $(OBJDIR)/iio.o $
 $(BINDIR)/gradual : $(SRCDIR)/gradual.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
 	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
+# TEMP - the entire-octave computation option must be included in gradual
+$(BINDIR)/gradual_entireoctave : $(SRCDIR)/gradual_entireoctave.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
+$(BINDIR)/gradual_check_extrema : $(SRCDIR)/gradual_check_extrema.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
+
+$(OBJDIR)/lib_check_extrema.o : $(SRCDIR)/lib_check_extrema.c $(OBJDIR)/lib_scalespace.o $(OBJDIR)/lib_util.o
+	$(CC) $(CFLAGS) $(OFLAGS) -c -o $@ $^
+
+
+# checking the presence of extrema
+
+$(BINDIR)/grab_ss_neighborhood : $(SRCDIR)/grab_ss_neighborhood.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o $(OBJDIR)/lib_check_extrema.o $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
+
+
+$(BINDIR)/check_extremum_in_cube : $(SRCDIR)/check_extremum_in_cube.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_check_extrema.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
+
+$(BINDIR)/check_extrema_in_scalespace : $(SRCDIR)/check_extrema_in_scalespace.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_check_extrema.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
 
 #-------------------------------------------------------------------------------------

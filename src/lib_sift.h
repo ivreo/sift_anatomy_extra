@@ -63,7 +63,7 @@ The SIFT method is patented
 #define _LIB_SIFT_H_
 #include <stdio.h>
 
-
+AAA
 
 
 /** @brief the SIFT keypoint structure
