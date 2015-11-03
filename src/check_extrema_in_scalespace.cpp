@@ -162,10 +162,10 @@ int main(int argc, char **argv)
     FILE* fp;
 
     // criteria parameter (balls)
-    _myfloat r1 = 0;
-    _myfloat r2 = 0.1;
-    _myfloat r3 = 1.0;
-    int type = 1;
+    _myfloat r1 = 1;
+    _myfloat r2 = 1.1;
+    _myfloat r3 = 2.0;
+    int type = 2;  // JM criterion
 
     // Parsing command line
   //  int res = parse_options(argc, argv, &r, &epsilon, &r1, &r2, &r3, &type);
@@ -185,6 +185,7 @@ int main(int argc, char **argv)
 
     debug("nspo %i", n_spo);
 
+    int noct = d->nOct;
 
     // Loading list of keypoints
     struct sift_keypoints* keysIn = sift_malloc_keypoints();
@@ -195,24 +196,35 @@ int main(int argc, char **argv)
     int r = ceil(r3);
     int h = (2*r+1);
     _myfloat* cube = (_myfloat*)xmalloc(h*h*h*sizeof(_myfloat));
+    int confirmed = 0;
     for(int k = 0; k < keysIn->size; k++){
 
         int o = keysIn->list[k]->o;
         int s = keysIn->list[k]->s;
         int i = keysIn->list[k]->i;
         int j = keysIn->list[k]->j;
+        debug( "(o,s,i,j) = (%i,%i,%i,%i)", o, s, i, j);
+        
+        _myfloat output;
+        if( o < noct ){
 
         // Extracting the cube
         extract_portion_of_scalespace(cube, d, r, o, s, i, j);
 
         // Check if there's an extremum inside
-        _myfloat output;
         //output = check_discrete_extremum(cube, r, epsilon);
         output = confirm_extremum_is_present_inside_ball(cube, r, epsilon, r1, r2, r3, type);
 
+        }else{
+            output = NAN;
+        }
+
         // Output
         fprintf(stdout, "%f\n", output);
+        if (fabs(output) == 1)
+            confirmed +=1;
     }
+    fprintf(stderr, " CONFIRMED %i out of %i\n", confirmed, keysIn->size );
     return EXIT_SUCCESS;
 }
 

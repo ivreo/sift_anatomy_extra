@@ -186,6 +186,77 @@ static void scalespace_compute_dense_ss_and_dog(struct sift_scalespace* ss, // G
 }
 
 
+// TEMP TEMP TMP
+// DELETE
+static void scalespace_compute_dense_only_dog(
+                                     struct sift_scalespace* dd, // DoG
+                                     _myfloat* in,         
+                                     int w_in,
+                                     int h_in,
+                                     _myfloat sigma_in,
+                                     _myfloat k,
+                                     int flag_interp)
+{
+
+    /* size of the interpolated image */
+    _myfloat delta = dd->octaves[0]->delta;
+    int w_min = dd->octaves[0]->w;
+    int h_min = dd->octaves[0]->h;
+
+    /* checking scale-space definition consistance*/
+    assert(w_min == (int)(w_in/delta));
+    assert(h_min == (int)(h_in/delta));
+    assert(w_min >= w_in);
+    assert(h_min >= h_in); // always interpolate
+
+    // Compute the interpolated image (bsplines)
+    _myfloat* tmp = xmalloc(w_min*h_min * sizeof(*tmp));
+    oversample_with_flag_BIS(in, w_in, h_in, tmp, w_min, h_min, delta, flag_interp);
+    _myfloat* tmpM = xmalloc(w_min*h_min*sizeof(*tmpM));
+    _myfloat* tmpP = xmalloc(w_min*h_min*sizeof(*tmpP));
+
+    // ... and from it, compute the scale-spaces
+    for(int o = 0; o < dd->nOct; o++){
+        struct octa* d_oct = dd->octaves[o]; 
+        int w = d_oct->w;
+        int h = d_oct->h;
+        for(int s = 0; s < d_oct->nSca-1; s++){ /* add blur to previous image in the stack */
+            // TEMP   -1 car a ete memory_allouee comme un Gaussian scalespace
+
+            //debug(" oct %i scale %i   (w,h)=(%i,%i) ", o, s, w, h);
+            debug( "  value kappa %f   (o,s) = (%i,%i) ", k,   o, s);
+
+            _myfloat sigma = d_oct->sigmas[s];
+            
+            _myfloat sigM = sqrt(sigma*sigma - sigma_in*sigma_in)/delta;
+            _myfloat sigP = sqrt( k * k * sigma*sigma - sigma_in*sigma_in)/delta;
+            
+            add_gaussian_blur_dct(tmp, tmpM, w_min, h_min, sigM);
+            add_gaussian_blur_dct(tmp, tmpP, w_min, h_min, sigP);
+            
+            _myfloat* imM = xmalloc(w*h*sizeof(*imM));
+            _myfloat* imP = xmalloc(w*h*sizeof(*imP));
+
+            int subfactor = pow(2, o);
+            subsample_by_intfactor(tmpM, imM, w_min, h_min, subfactor);
+            subsample_by_intfactor(tmpP, imP, w_min, h_min, subfactor);
+
+            for(int i = 0; i < w*h; i++){
+                // for DoG scale-space
+                d_oct->imStack[s*w*h+i] = imP[i] - imM[i];
+                // for Gaussian scale-space
+                //oct->imStack[s*w*h+i] = imM[i];
+            }
+            xfree(imM);
+            xfree(imP);
+        }
+    }
+    xfree(tmp);
+    xfree(tmpM);
+    xfree(tmpP);
+}
+
+
 
 
 
@@ -319,6 +390,25 @@ struct sift_keypoints* sift_anatomy_dense(_myfloat* x, int w, int h,
     return k;
 }
 
+
+// TMP
+// TMP - DELETE
+struct sift_scalespace* just_compute_scalespace(_myfloat* x, int w, int h,
+                                                struct sift_parameters* p,
+                                                int flag_interp)
+{
+    int n_oct = number_of_octaves(w, h, p);
+    // HACK - TEMP
+    struct sift_scalespace* d   = sift_malloc_scalespace_lowe_floatnspo(n_oct, p->fnspo, w, h, p->delta_min, p->sigma_min);
+    // correction nspo
+    for(int o = 0; o < d->nOct; o++)
+        d->octaves[o]->nSca = d->octaves[o]->nSca - 1;
+
+    _myfloat kfact = pow(2, 1.0/(_myfloat)(p->dog_nspo));
+    scalespace_compute_dense_only_dog(d, x, w, h, p->sigma_in, kfact, flag_interp);
+
+    return d;
+}
 
 
 

@@ -15,6 +15,13 @@ struct sift_keypoints* sift_anatomy_dense(_myfloat* x, int w, int h, struct sift
                                           struct sift_keypoints* kk[6],
                                           int flag_interp);
 
+// TMP - DELETE
+struct sift_scalespace* just_compute_scalespace(_myfloat* x, int w, int h,
+                                                struct sift_parameters* p,
+                                                int flag_interp);
+
+
+
 struct sift_keypoints* sift_anatomy_gradual(_myfloat* x, int w, int h, struct sift_parameters* p,
                                           struct sift_scalespace* ss[4],
                                           struct sift_keypoints* kk[6],

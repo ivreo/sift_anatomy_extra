@@ -41,7 +41,6 @@ The SIFT method is patented
  this determination. If and only if they don't conflict with any patent terms,
  you can benefit from the following license terms attached to this file.
 
-
 This program is free software: you can use, modify and/or
 redistribute it under the terms of the simplified BSD
 License. You should have received a copy of this license along
@@ -439,33 +438,36 @@ int main(int argc, char **argv)
     struct sift_scalespace **ss = (sift_scalespace **)xmalloc(4*sizeof(struct sift_scalespace*));
 
     /** Algorithm */
-    struct sift_keypoints* k = sift_anatomy_dense(x, w, h, p, ss, kk, flag_interp);
+//    struct sift_keypoints* k = sift_anatomy_dense(x, w, h, p, ss, kk, flag_interp);
+// DELETED FUNCTION    struct sift_keypoints* k = sift_anatomy_dense_just_scalespace(x, w, h, p, ss, kk, flag_interp);
+    ss[1] = just_compute_scalespace(x, w, h, p, flag_interp);
 
     /** OUTPUT */
     // TEMP TODO
-    print_keypoints_and_vals(k, p->dog_nspo);
+//    print_keypoints_and_vals(k, p->dog_nspo);
     // With normalized value (consistent with DoG threshold for nspo = 3
 
     FILE* fp;
     char name[FILENAME_MAX];
-    if(flagverb_keys == 1){
-        sprintf(name,"extra_NES_%s.txt",label_keys);              sift_save_keypoints(kk[0], name, 0);
-        sprintf(name,"extra_DoGSoftThresh_%s.txt",label_keys);    sift_save_keypoints(kk[1], name, 0);
-        sprintf(name,"extra_ExtrInterp_%s.txt",label_keys);       sift_save_keypoints(kk[2], name, 0);
-        sprintf(name,"extra_DoGThresh_%s.txt",label_keys);        sift_save_keypoints(kk[3], name, 0);
-        sprintf(name,"extra_OnEdgeResp_%s.txt",label_keys);       sift_save_keypoints(kk[4], name, 0);
-        sprintf(name,"extra_FarFromBorder_%s.txt",label_keys);    sift_save_keypoints(kk[5], name, 0);
-    }
-    if (flagverb_ss == 1){
-        sprintf(name,"scalespace_%s",label_ss);     print_sift_scalespace_gray_nearestneighbor(ss[0],name);
-        sprintf(name,"DoG_%s",label_ss);            print_sift_scalespace_rgb(ss[1],name);
-    }
-    if (flag_bin == 1){
+//TEMP//    if(flagverb_keys == 1){
+//TEMP//        sprintf(name,"extra_NES_%s.txt",label_keys);              sift_save_keypoints(kk[0], name, 0);
+//TEMP//        sprintf(name,"extra_DoGSoftThresh_%s.txt",label_keys);    sift_save_keypoints(kk[1], name, 0);
+//TEMP//        sprintf(name,"extra_ExtrInterp_%s.txt",label_keys);       sift_save_keypoints(kk[2], name, 0);
+//TEMP//        sprintf(name,"extra_DoGThresh_%s.txt",label_keys);        sift_save_keypoints(kk[3], name, 0);
+//TEMP//        sprintf(name,"extra_OnEdgeResp_%s.txt",label_keys);       sift_save_keypoints(kk[4], name, 0);
+//TEMP//        sprintf(name,"extra_FarFromBorder_%s.txt",label_keys);    sift_save_keypoints(kk[5], name, 0);
+//TEMP//    }
+//TEMP//    if (flagverb_ss == 1){
+//TEMP//        sprintf(name,"scalespace_%s",label_ss);     print_sift_scalespace_gray_nearestneighbor(ss[0],name);
+//TEMP//        sprintf(name,"DoG_%s",label_ss);            print_sift_scalespace_rgb(ss[1],name);
+//TEMP//    }
+   // if (flag_bin == 1){
+    if ( 1){
         // scale-space
-        sprintf(name,"ss_%s.bin",label_bin);
-        fp = fopen(name, "wb");
-        sift_write_scalespace_binary_file(fp, ss[0]);
-        fclose(fp);
+   //     sprintf(name,"ss_%s.bin",label_bin);
+   //     fp = fopen(name, "wb");
+   //     sift_write_scalespace_binary_file(fp, ss[0]);
+   //     fclose(fp);
         // DoG
         sprintf(name,"dog_%s.bin",label_bin);
         fp = fopen(name, "wb");
@@ -476,14 +478,14 @@ int main(int argc, char **argv)
     /* memory deallocation */
     xfree(x);
     xfree(p);
-    sift_free_keypoints(k);
-    for(int i = 0; i < 6; i++){
-      //  sift_free_keypoints(kk[i]);   // TODO pour gradual
-    }
-    xfree(kk);
-    for(int i = 0; i < 4; i++){
-       // sift_free_scalespace(ss[i]);   // TODO pour gradual
-    }
+ //   sift_free_keypoints(k);
+ //   for(int i = 0; i < 6; i++){
+ //     //  sift_free_keypoints(kk[i]);   // TODO pour gradual
+ //   }
+ //   xfree(kk);
+ //   for(int i = 0; i < 4; i++){
+ //      // sift_free_scalespace(ss[i]);   // TODO pour gradual
+ //   }
     xfree(ss);
     return EXIT_SUCCESS;
 }

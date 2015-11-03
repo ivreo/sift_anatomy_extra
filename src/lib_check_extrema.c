@@ -1,7 +1,6 @@
 /** @file lib_check_extrema.c
  *  20151023
  *
- *
  */
 
 #include <stdio.h>
@@ -101,7 +100,6 @@ void extract_portion_of_scalespace(_myfloat* cube, struct sift_scalespace*d,  in
     for(int ks = s-r; ks <= s+r; ks++){
         for(int ki = i-r; ki <= i+r; ki++){
             for(int kj = j-r; kj <= j+r; kj++){
-
                 if ( (ks>=0) && (ki>=0) && (kj>=0) && (ks<nSca) && (ki<h) && (kj<w) ){
                     cube[n] = imStack[ks*w*h + ki*w + kj];
                 }else{
@@ -246,7 +244,7 @@ _myfloat confirm_extremum_is_present_inside_ball(_myfloat* cube,
             }
         }
     }
-    //debug( "n_in=%i  n_out=%i", n_in, n_out);
+    debug( "n_in=%i  n_out=%i", n_in, n_out);
 
     // Load values
     _myfloat values_in[h*h*h];
@@ -295,16 +293,6 @@ _myfloat confirm_extremum_is_present_inside_ball(_myfloat* cube,
             is_local_min = (min_in < min_out);
         }
 
-//        // criterion
-//        //bool is_local_max = (min_in > max_out);
-//        //bool is_local_min = (max_in < min_out);
-//
-//        //bool is_local_max = (mean_in > max_out);
-//        //bool is_local_min = (mean_in < min_out);
-//
-//        // JM criterion
-//        is_local_max = (max_in > max_out);
-//        is_local_min = (min_in < min_out);
 
         if (is_local_max == true)
             output = 1.;

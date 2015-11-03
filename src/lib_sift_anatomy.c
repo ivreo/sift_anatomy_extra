@@ -1681,6 +1681,7 @@ int number_of_octaves(int w, int h, const struct sift_parameters* p)
     int h0 = MIN(w,h)/p->delta_min;
     // The number of octaves.
     int n_oct = MIN(p->n_oct, (int)(log(h0/hmin)/M_LN2) + 1);
+    debug( "en parametre   noct %i  ", p->n_oct);
     return n_oct;
 }
 

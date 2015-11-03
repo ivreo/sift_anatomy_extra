@@ -249,7 +249,6 @@ struct sift_scalespace* sift_malloc_scalespace_lowe(int nOct,   /* # of octaves 
     for(int o=0;o<nOct;o++)
         xfree(sigmas[o]);
     xfree(sigmas);    
-
     return scalespace;
 }
 
