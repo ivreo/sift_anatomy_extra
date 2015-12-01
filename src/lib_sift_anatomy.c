@@ -1681,7 +1681,6 @@ int number_of_octaves(int w, int h, const struct sift_parameters* p)
     int h0 = MIN(w,h)/p->delta_min;
     // The number of octaves.
     int n_oct = MIN(p->n_oct, (int)(log(h0/hmin)/M_LN2) + 1);
-    debug( "en parametre   noct %i  ", p->n_oct);
     return n_oct;
 }
 
@@ -1740,7 +1739,6 @@ struct sift_keypoints* sift_anatomy(const _myfloat* x, int w, int h, const struc
     keypoints_find_3d_discrete_extrema(d, kA, p->n_ori, p->n_hist, p->n_bins);
     keypoints_discard_with_low_response(kA, kB, 0.8*thresh);
     keypoints_interpolate_position(d, kB, kC, p->itermax);
-    //keypoints_interpolate_positionTEMP(d, kB, kC, p->itermax, p->ofstMax_X, p->ofstMax_S, p->flag_jumpinscale);
     keypoints_discard_with_low_response(kC, kD, thresh); 
     keypoints_compute_edge_response(d,kD); 
     keypoints_discard_on_edge(kD, kE, (p->C_edge+1)*(p->C_edge+1)/p->C_edge);

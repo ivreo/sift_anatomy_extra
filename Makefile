@@ -4,7 +4,7 @@
 #CC = gcc
 CC = clang
 OFLAGS = -g -O3
-LIBS = -lpng -L/usr/local/lib -lm 
+LIBS = -lpng -L/usr/local/lib -lm
 #-lquadmath   -ltcmalloc
 
 CFLAGS = -Wall -Wno-write-strings -pedantic -std=c99 -D_POSIX_C_SOURCE=200809L  #   -Werror
@@ -57,15 +57,15 @@ match= $(BINMATCH)
 demo= $(BINDEMO)
 #default: $(OBJDIR) $(BINDIR) $(sift) $(match) $(demo)
 #extra= $(BINDIR) $(BINDIR)/match_cli_ellipse $(BINDIR)/normalized_patch $(BINDIR)/find_orientation_and_describe_keys $(BINDIR)/extra_sift_cli $(BINDIR)/gradual
-extra= $(BINDIR) $(BINDIR)/gradual  $(BINDIR)/gradual_entireoctave  $(BINDIR)/gradual_check_extrema  $(BINDIR)/extra_sift_cli   $(BINDIR)/grab_ss_neighborhood $(BINDIR)/check_extremum_in_cube $(BINDIR)/check_extrema_in_scalespace   #$(BINDIR)/extra_sift_cli_extrema_patches
+extra= $(BINDIR) $(BINDIR)/gradual  $(BINDIR)/extra_sift_cli   $(BINDIR)/grab_ss_neighborhood $(BINDIR)/check_extremum_in_cube $(BINDIR)/check_extrema_in_scalespace   #$(BINDIR)/extra_sift_cli_extrema_patches
 default: $(OBJDIR) $(BINDIR) $(sift) $(match) $(demo) $(extra)
 
 #---------------------------------------------------------------
 #  SIFT CLI
 #
 
-$(BIN) : $(BINDIR)/% : $(SRCDIR)/%.c $(OBJDIR)/lib_sift_anatomy.o  $(OBJDIR)/lib_keypoint.o $(OBJDIR)/lib_scalespace.o $(OBJDIR)/lib_description.o   $(OBJDIR)/lib_discrete.o  $(OBJDIR)/lib_io_scalespace.o  $(OBJDIR)/lib_util.o   $(OBJDIR)/io_png.o  $(OBJDIR)/lib_bsplines.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+$(BIN) : $(BINDIR)/% : $(SRCDIR)/%.c $(OBJDIR)/lib_sift_anatomy.o  $(OBJDIR)/lib_keypoint.o $(OBJDIR)/lib_scalespace.o $(OBJDIR)/lib_description.o   $(OBJDIR)/lib_discrete.o  $(OBJDIR)/lib_io_scalespace.o  $(OBJDIR)/lib_util.o   $(OBJDIR)/io_png.o  $(OBJDIR)/lib_bsplines.o  $(OBJDIR)/iio.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg
 	#$(OBJDIR)/lib_sift.o
 
 
@@ -176,18 +176,9 @@ $(OBJDIR)/lib_dense_anatomy.o : $(SRCDIR)/lib_dense_anatomy.c
 $(BINDIR)/extra_sift_cli : $(SRCDIR)/extra_sift_cli.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
 	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
-#$(BINDIR)/extra_sift_cli_extrema_patches : $(SRCDIR)/extra_sift_cli_extrema_patches.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o $(OBJDIR)/lib_sift.o
-#	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
-
 $(BINDIR)/gradual : $(SRCDIR)/gradual.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
 	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
-# TEMP - the entire-octave computation option must be included in gradual
-$(BINDIR)/gradual_entireoctave : $(SRCDIR)/gradual_entireoctave.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
-	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
-
-$(BINDIR)/gradual_check_extrema : $(SRCDIR)/gradual_check_extrema.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
-	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
 $(OBJDIR)/lib_check_extrema.o : $(SRCDIR)/lib_check_extrema.c $(OBJDIR)/lib_scalespace.o $(OBJDIR)/lib_util.o
 	$(CC) $(CFLAGS) $(OFLAGS) -c -o $@ $^

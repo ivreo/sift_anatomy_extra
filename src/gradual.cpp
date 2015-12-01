@@ -94,7 +94,7 @@ void print_usage()
     fprintf(stderr, "                                                                           \n");
     fprintf(stderr, "   -thresh_dog (0.0133) threshold over the DoG response                    \n");
     fprintf(stderr, "   -thresh_edge   (10)  threshold over the ratio of principal curvature    \n");
-    fprintf(stderr, "         ########### NO DESCRIPTION  ###################                   \n");
+    fprintf(stderr, "                                                                           \n");
     fprintf(stderr, "   -ori_nbins    (36)   number of bins in the orientation histogram        \n");
     fprintf(stderr, "   -ori_thresh  (0.8)   threhsold for considering local maxima in          \n");
     fprintf(stderr, "                        the orientation histogram                          \n");
@@ -111,8 +111,6 @@ void print_usage()
     fprintf(stderr, "          -----  EXTRA   dense_anatomy -----                               \n");
     fprintf(stderr, "                                                                           \n");
     fprintf(stderr, "   -ss_fnspo (3.00) float number of scales per octaves (-ss_nspo not used) \n");
-    fprintf(stderr, "   -flag_semigroup   BOOL (1)    semigroup (1) or direct (0)               \n");
-    fprintf(stderr, "   -flag_dct         BOOL (0)    dct (1) or discrete (0)                   \n");
     fprintf(stderr, "   -flag_interp     (0)  bilin (0) / DCT (1)/ bsplines (3,5,..,11)         \n");
     fprintf(stderr, "   -itermax             5        max number of iterations                  \n");
     fprintf(stderr, "          NOTE: if itermax=0 then all the discrete extrema are output      \n");
@@ -122,8 +120,19 @@ void print_usage()
     fprintf(stderr, "   -ofstMax_X   (0.5)   interpolation validity domain definition in space  \n");
     fprintf(stderr, "   -ofstMax_S   (0.5)                 ... in scale                         \n");
     fprintf(stderr, "   -flag_jumpinscale   (0 in gradual / not an option in gradual)           \n");
-    fprintf(stderr, "   -flag_bordereffect    BOOL (0 = standard lowe)                          \n");
 }
+
+
+//    /**  @brief  The DMIN allowing a balanced scale-space corresponding to NSPO, SSMIN
+//     *
+//     *
+//     */
+//    static _myfloat ideal_dmin(int nspo, _myfloat ssmin)
+//    {
+//        _myfloat dmin = 1/sqrt(2)*ssmin*(1 + pow( 2,(1./nspo)) - pow(2, (1-1./nspo)) );
+//        return dmin;
+//    }
+
 
 
 /**
@@ -179,10 +188,7 @@ static int parse_options(int argc, char** argv,
                          int *flag_ss,
                          char* label_keys,
                          char* label_ss,
-                         int *flag_semigroup,
-                         int *flag_dct,
-                         int *flag_interp,
-                         int *flag_bordereffect)
+                         int *flag_interp)
 {
     int isfound;
     char val[128];
@@ -257,12 +263,12 @@ static int parse_options(int argc, char** argv,
     if (isfound == -1)    return EXIT_FAILURE;
 
     // EXTRA DENSE ANATOMY
-    isfound = pick_option(&argc, &argv, "flag_semigroup", val);
-    if (isfound ==  1)    *flag_semigroup = atoi(val);
-    if (isfound == -1)    return EXIT_FAILURE;
-    isfound = pick_option(&argc, &argv, "flag_dct", val);
-    if (isfound ==  1)    *flag_dct = atoi(val);
-    if (isfound == -1)    return EXIT_FAILURE;
+//    isfound = pick_option(&argc, &argv, "flag_semigroup", val);
+//    if (isfound ==  1)    *flag_semigroup = atoi(val);
+//    if (isfound == -1)    return EXIT_FAILURE;
+//    isfound = pick_option(&argc, &argv, "flag_dct", val);
+//    if (isfound ==  1)    *flag_dct = atoi(val);
+//    if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "itermax", val);
     if (isfound ==  1)    p->itermax = atoi(val);
     if (isfound == -1)    return EXIT_FAILURE;
@@ -274,9 +280,6 @@ static int parse_options(int argc, char** argv,
     if (isfound == -1)    return EXIT_FAILURE;
     isfound = pick_option(&argc, &argv, "flag_interp", val);
     if (isfound ==  1)    *flag_interp = atoi(val);
-    if (isfound == -1)    return EXIT_FAILURE;
-    isfound = pick_option(&argc, &argv, "flag_bordereffect", val);
-    if (isfound ==  1)    *flag_bordereffect = atoi(val);
     if (isfound == -1)    return EXIT_FAILURE;
 
     isfound = pick_option(&argc, &argv, "ss_fnspo", val);
@@ -316,6 +319,8 @@ static int parse_options(int argc, char** argv,
 
 
 
+
+
 // NOTE: copied from iio.c 
 static bool string_suffix(const char *s, const char *suf)
 {
@@ -343,6 +348,13 @@ static _myfloat* read_image(char* n, int* w, int* h)
         // IO_EXR
         x = readEXR_float(n, w, h);
     }
+    else if ( string_suffix(n, ".tif")  || string_suffix(n, ".tiff")  || string_suffix(n, ".TIFF")){
+        // IIO
+        x = iio_read_image_float(n, w, h); 
+        for(int i=0; i < (*w)*(*h); i++)
+            //x[i] /= 256.0;
+            x[i] /= 4096.0;
+    }
     else{
         fatal_error("This version only recognizes png and exr(32bits) images");
     }
@@ -362,15 +374,13 @@ static _myfloat* read_image(char* n, int* w, int* h)
 // Note that the value in the 27 long vector are not normalized
 void print_keypoints_and_vals(const struct sift_keypoints* keys, int dog_nspo)
 {
-   // float k_nspo =  exp( M_LN2/( (float)(dog_nspo)));
-   // float k_3 =  exp( M_LN2/( (float)3));
-    float k_nspo = pow(2, (float)(dog_nspo));
-    float k_3 =  pow(2, 3.0);
-    float factor = (k_3 - 1) / (k_nspo - 1);
+    _myfloat k_nspo = pow(2, (_myfloat)(dog_nspo));
+    _myfloat k_3 =  pow(2, 3.0);
+    _myfloat factor = (k_3 - 1) / (k_nspo - 1);
 
     for (int i = 0; i < keys->size; i++){
         struct keypoint* k = keys->list[i];
-        float val = k->val * factor;
+        _myfloat val = k->val * factor;
 #ifdef QUAD // conversion to string and then fprintf
         char str[1024]; // long strinpl
         quadmath_snprintf(str, sizeof(str), "%.30Qg %.30Qg %.30Qg %.30Qg %.30Qg",  k->x, k->y, k->sigma, val);
@@ -378,20 +388,16 @@ void print_keypoints_and_vals(const struct sift_keypoints* keys, int dog_nspo)
 #else
         fprintf(stdout, "%f %f %f %f ", k->x, k->y, k->sigma, val);
 #endif
-        //
         // The 27 points in the cube.
         for(int n = 0; n < 27; n++){
             fprintf(stdout, "%33.30f ", k->neighbors[n]);
         }
         // EXTRA - the interpolation offset for the last interpolation and grid position
-        // k->s is always equal to 1 for the 'gradual' implementation // TODO correct the structure somewhere before output.
         fprintf(stdout, "%i %i %i %f %f %f ", k->i, k->j, k->s,  k->ofstX,  k->ofstY,  k->ofstS);
         //
         fprintf(stdout, "\n");
     }
 }
-
-
 
 
 
@@ -420,14 +426,9 @@ int main(int argc, char **argv)
     strcpy(label_ss, "extra");
     strcpy(label_keys, "extra");
     // EXTRA DENSE
-    int flag_semigroup = 1;
-    int flag_dct = 1;
     int flag_interp = 0;
-    int flag_bordereffect = 0;
-
     // Parsing command line
-    int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss,
-                                      &flag_semigroup, &flag_dct, &flag_interp, &flag_bordereffect);
+    int res = parse_options(argc, argv, p, &flagverb_keys, &flagverb_ss, label_keys, label_ss, &flag_interp);
     if (res == EXIT_FAILURE)
         return EXIT_FAILURE;
 
@@ -443,38 +444,24 @@ int main(int argc, char **argv)
     struct sift_keypoints **kk = (sift_keypoints **)xmalloc(6*sizeof(struct sift_keypoints*));
     for(int i = 0; i < 6; i++)
         kk[i] = sift_malloc_keypoints();
-    // WARNING 4 scale-space representation are recorded (Gaussian, Laplacian, two gradient components)
-    struct sift_scalespace **ss = (sift_scalespace **)xmalloc(4*sizeof(struct sift_scalespace*));
 
     /** Algorithm */
-    struct sift_keypoints* k;
-    if (flag_bordereffect == 0){
-        k = sift_anatomy_gradual(x, w, h, p, ss, kk, flag_dct, flag_interp);
-    }
-    else{
-        k = sift_anatomy_gradual_auxil(x, w, h, p, ss, kk, flag_dct, flag_interp);
-    }
+//    struct sift_keypoints* k = sift_anatomy_gradual_old(x, w, h, p, kk, flag_dct, flag_interp);
+    struct sift_keypoints* k = sift_anatomy_gradual(x, w, h, p, kk, flag_interp);
 
     /** OUTPUT */
-    //int flag = flagverb_keys + 1;
-    //sift_print_keypoints(k, flag);
-    //sift_print_keypoints(k, 0);
-    //print_keypoints_and_vals(k, p->n_spo);
-    print_keypoints_and_vals(k, p->dog_nspo);
-    // With normalized value (consistent with DoG threshold for nspo = 3
+    int flag = flagverb_keys + 1;
+    sift_print_keypoints(k, flag);
+    //print_keypoints_and_vals(k, p->dog_nspo);
 
-   // char name[FILENAME_MAX];
+    char name[FILENAME_MAX];
     if(flagverb_keys == 1){
-       // sprintf(name,"extra_NES_%s.txt",label_keys);              sift_save_keypoints(kk[0], name, 0);
-       // sprintf(name,"extra_DoGSoftThresh_%s.txt",label_keys);    sift_save_keypoints(kk[1], name, 0);
-       // sprintf(name,"extra_ExtrInterp_%s.txt",label_keys);       sift_save_keypoints(kk[2], name, 0);
-       // sprintf(name,"extra_DoGThresh_%s.txt",label_keys);        sift_save_keypoints(kk[3], name, 0);
-       // sprintf(name,"extra_OnEdgeResp_%s.txt",label_keys);       sift_save_keypoints(kk[4], name, 0);
-       // sprintf(name,"extra_FarFromBorder_%s.txt",label_keys);    sift_save_keypoints(kk[5], name, 0);
-    }
-    if (flagverb_ss == 1){
-       // sprintf(name,"scalespace_%s",label_ss);     print_sift_scalespace_gray_nearestneighbor(ss[0],name);
-       // sprintf(name,"DoG_%s",label_ss);            print_sift_scalespace_rgb(ss[1],name);
+        sprintf(name,"extra_NES_%s.txt",label_keys);              sift_save_keypoints(kk[0], name, 0);
+        sprintf(name,"extra_DoGSoftThresh_%s.txt",label_keys);    sift_save_keypoints(kk[1], name, 0);
+        sprintf(name,"extra_ExtrInterp_%s.txt",label_keys);       sift_save_keypoints(kk[2], name, 0);
+        sprintf(name,"extra_DoGThresh_%s.txt",label_keys);        sift_save_keypoints(kk[3], name, 0);
+        sprintf(name,"extra_OnEdgeResp_%s.txt",label_keys);       sift_save_keypoints(kk[4], name, 0);
+        sprintf(name,"extra_FarFromBorder_%s.txt",label_keys);    sift_save_keypoints(kk[5], name, 0);
     }
 
     /* memory deallocation */
@@ -485,10 +472,6 @@ int main(int argc, char **argv)
         sift_free_keypoints(kk[i]);   // TODO pour gradual
     }
     xfree(kk);
-    for(int i = 0; i < 4; i++){
-       // sift_free_scalespace(ss[i]);   // TODO pour gradual
-    }
-    xfree(ss);
 
 
     return EXIT_SUCCESS;

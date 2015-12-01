@@ -178,8 +178,6 @@ static int parse_options(int argc, char** argv,
                          char* label_keys,
                          char* label_ss,
                          char* label_bin,
-                       //  int *flag_semigroup,
-                       //  int *flag_dct,
                          int *flag_interp)
 {
     int isfound;
@@ -298,7 +296,6 @@ static int parse_options(int argc, char** argv,
     if (isfound ==  1)    p->ofstMax_S = atof(val);
     if (isfound == -1)    return EXIT_FAILURE;
 
-
     // check for unknown option call
     for(int i = 0; i < argc; i++){
         if (argv[i][0] == '-'){
@@ -351,9 +348,8 @@ static _myfloat* read_image(char* n, int* w, int* h)
         for(int i=0; i < (*w)*(*h); i++)
             x[i] /= 256.0;
     }
-
-    //return x;
     
+    // cast
     _myfloat* y = (_myfloat*)malloc((*w)*(*h)*sizeof(_myfloat));
     for (int i = 0; i < (*w)*(*h); i++){
         y[i] = (_myfloat)x[i];
@@ -361,6 +357,8 @@ static _myfloat* read_image(char* n, int* w, int* h)
     free(x);
     return(y);
 }
+
+
 
 
 
@@ -386,18 +384,17 @@ void print_keypoints_and_vals(const struct sift_keypoints* keys, int dog_nspo)
 
 
 
-
 /** @brief Main SIFT routine
- * 
- * takes one image as input.        
+ *
+ * takes one image as input.
  * outputs the extracted keypoints in the standard output.
- * 
+ *
  * @param flag for the SIFT transform
- * 
- * 0 = one image -> one txt file 
+ *
+ * 0 = one image -> one txt file
  * 1 = one image -> all txt files
  * 2 = one image -> all txt files + scalespace and DoG
- * 
+ *
  */
 int main(int argc, char **argv)
 {
@@ -405,7 +402,7 @@ int main(int argc, char **argv)
     struct sift_parameters* p = sift_assign_default_parameters();
     int flagverb_keys = 0;
     int flagverb_ss = 0;
-    int flag_bin = 1;
+    int flag_bin = 0;
     char label_ss[256];
     char label_keys[256];
     char label_bin[256];
@@ -438,36 +435,34 @@ int main(int argc, char **argv)
     struct sift_scalespace **ss = (sift_scalespace **)xmalloc(4*sizeof(struct sift_scalespace*));
 
     /** Algorithm */
-//    struct sift_keypoints* k = sift_anatomy_dense(x, w, h, p, ss, kk, flag_interp);
-// DELETED FUNCTION    struct sift_keypoints* k = sift_anatomy_dense_just_scalespace(x, w, h, p, ss, kk, flag_interp);
-    ss[1] = just_compute_scalespace(x, w, h, p, flag_interp);
+    struct sift_keypoints* k = sift_anatomy_dense(x, w, h, p, ss, kk, flag_interp);
 
+   // /** OUTPUT */
+   // print_keypoints_and_vals(k, p->dog_nspo);
     /** OUTPUT */
-    // TEMP TODO
-//    print_keypoints_and_vals(k, p->dog_nspo);
-    // With normalized value (consistent with DoG threshold for nspo = 3
+    int flag = flagverb_keys + 1;
+    sift_print_keypoints(k, flag);
 
     FILE* fp;
     char name[FILENAME_MAX];
-//TEMP//    if(flagverb_keys == 1){
-//TEMP//        sprintf(name,"extra_NES_%s.txt",label_keys);              sift_save_keypoints(kk[0], name, 0);
-//TEMP//        sprintf(name,"extra_DoGSoftThresh_%s.txt",label_keys);    sift_save_keypoints(kk[1], name, 0);
-//TEMP//        sprintf(name,"extra_ExtrInterp_%s.txt",label_keys);       sift_save_keypoints(kk[2], name, 0);
-//TEMP//        sprintf(name,"extra_DoGThresh_%s.txt",label_keys);        sift_save_keypoints(kk[3], name, 0);
-//TEMP//        sprintf(name,"extra_OnEdgeResp_%s.txt",label_keys);       sift_save_keypoints(kk[4], name, 0);
-//TEMP//        sprintf(name,"extra_FarFromBorder_%s.txt",label_keys);    sift_save_keypoints(kk[5], name, 0);
-//TEMP//    }
-//TEMP//    if (flagverb_ss == 1){
-//TEMP//        sprintf(name,"scalespace_%s",label_ss);     print_sift_scalespace_gray_nearestneighbor(ss[0],name);
-//TEMP//        sprintf(name,"DoG_%s",label_ss);            print_sift_scalespace_rgb(ss[1],name);
-//TEMP//    }
-   // if (flag_bin == 1){
-    if ( 1){
+    if(flagverb_keys == 1){
+        sprintf(name,"extra_NES_%s.txt",label_keys);              sift_save_keypoints(kk[0], name, 0);
+        sprintf(name,"extra_DoGSoftThresh_%s.txt",label_keys);    sift_save_keypoints(kk[1], name, 0);
+        sprintf(name,"extra_ExtrInterp_%s.txt",label_keys);       sift_save_keypoints(kk[2], name, 0);
+        sprintf(name,"extra_DoGThresh_%s.txt",label_keys);        sift_save_keypoints(kk[3], name, 0);
+        sprintf(name,"extra_OnEdgeResp_%s.txt",label_keys);       sift_save_keypoints(kk[4], name, 0);
+        sprintf(name,"extra_FarFromBorder_%s.txt",label_keys);    sift_save_keypoints(kk[5], name, 0);
+    }
+    if (flagverb_ss == 1){
+        sprintf(name,"scalespace_%s",label_ss);     print_sift_scalespace_gray_nearestneighbor(ss[0],name);
+        sprintf(name,"DoG_%s",label_ss);            print_sift_scalespace_rgb(ss[1],name);
+    }
+    if (flag_bin == 1){
         // scale-space
-   //     sprintf(name,"ss_%s.bin",label_bin);
-   //     fp = fopen(name, "wb");
-   //     sift_write_scalespace_binary_file(fp, ss[0]);
-   //     fclose(fp);
+        sprintf(name,"ss_%s.bin",label_bin);
+        fp = fopen(name, "wb");
+        sift_write_scalespace_binary_file(fp, ss[0]);
+        fclose(fp);
         // DoG
         sprintf(name,"dog_%s.bin",label_bin);
         fp = fopen(name, "wb");
@@ -478,15 +473,18 @@ int main(int argc, char **argv)
     /* memory deallocation */
     xfree(x);
     xfree(p);
- //   sift_free_keypoints(k);
- //   for(int i = 0; i < 6; i++){
- //     //  sift_free_keypoints(kk[i]);   // TODO pour gradual
- //   }
- //   xfree(kk);
- //   for(int i = 0; i < 4; i++){
- //      // sift_free_scalespace(ss[i]);   // TODO pour gradual
- //   }
+    sift_free_keypoints(k);
+    for(int i = 0; i < 6; i++){
+        sift_free_keypoints(kk[i]);
+    }
+    xfree(kk);
+    for(int i = 0; i < 4; i++){
+        sift_free_scalespace(ss[i]);
+    }
     xfree(ss);
     return EXIT_SUCCESS;
 }
+
+
+
 

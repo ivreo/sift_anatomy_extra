@@ -69,12 +69,14 @@ this program. If not, see
 #include "lib_sift_anatomy.h"
 #include "lib_io_scalespace.h"
 #include "io_png.h"
+#include "iio.h"
 #include "lib_util.h"
 
 
 #include <string.h>
 
-
+// TEST it's CPP
+//#include "io_exr.h"
 
 
 void print_usage()
@@ -246,10 +248,58 @@ static int parse_options(int argc, char** argv,
     return EXIT_SUCCESS;
 }
 
+// NOTE: copied from iio.c 
+static bool string_suffix(const char *s, const char *suf)
+{
+	int len_s = strlen(s);
+	int len_suf = strlen(suf);
+	if (len_s < len_suf)
+		return false;
+	return 0 == strcmp(suf, s + (len_s - len_suf));
+}
+
+// reads the filename suffix and uses the appropriate routine in function.
+static _myfloat* read_image(char* n, int* w, int* h)
+{
+    float* x;
+
+    if (string_suffix(n, ".PNG") || string_suffix(n, ".png")){
+        // IO_PNG
+        size_t wt, ht;
+        x = io_png_read_f32_gray(n, &wt, &ht);
+        for(unsigned int i=0; i < wt*ht; i++)
+            x[i] /= 256.0;
+        *w = wt; *h = ht;
+    }
+//    else if ( string_suffix(n, ".EXR") || string_suffix(n, ".exr")){
+//        // IO_EXR
+//        x = readEXR_float(n, w, h);
+//    }
+    else if ( string_suffix(n, ".tif")  || string_suffix(n, ".tiff")  || string_suffix(n, ".TIFF") || string_suffix(n, ".jpg")  ){
+        // IIO
+        x = iio_read_image_float(n, w, h);
+        for(int i=0; i < (*w)*(*h); i++)
+            //x[i] /= 256.0;
+            x[i] /= 4096.0;
+    }
+    else{
+        fatal_error("This version only recognizes png, exr(32bits), tif and jpg images");
+    }
+
+    _myfloat* y = (_myfloat*)malloc((*w)*(*h)*sizeof(_myfloat));
+    for (int i = 0; i < (*w)*(*h); i++){
+        y[i] = (_myfloat)x[i];
+    }
+    free(x);
+    return(y);
+}
+
+
+
 
 
 /** @brief Main SIFT routine
- * 
+ *
  * takes one image as input.        
  * outputs the extracted keypoints in the standard output.
  * 
@@ -276,19 +326,22 @@ int main(int argc, char **argv)
     if (res == EXIT_FAILURE)
         return EXIT_FAILURE;
 
+    //size_t w, h;
+    //float* x = io_png_read_f32_gray(argv[1], &w, &h);
+    //if(!x)
+    //    fatal_error("File \"%s\" not found.", argv[1]);
+    //for(int i=0; i < w*h; i++)
+    //    x[i] /= 256.0;
+    //// TRICK - conversion float to _myfloat
+    //_myfloat* xx = xmalloc(w*h*sizeof(*xx));
+    //for(int i=0; i < w*h; i++)
+    //    xx[i] = (_myfloat)x[i];
+
     /** Loading image */
-    size_t w, h;
-    float* x = io_png_read_f32_gray(argv[1], &w, &h);
+    int w, h;
+    _myfloat* x = read_image(argv[1], &w, &h);
     if(!x)
         fatal_error("File \"%s\" not found.", argv[1]);
-    for(int i=0; i < w*h; i++)
-        x[i] /= 256.0;
-
-
-    // TRICK - conversion float to _myfloat
-    _myfloat* xx = xmalloc(w*h*sizeof(*xx));
-    for(int i=0; i < w*h; i++)
-        xx[i] = (_myfloat)x[i];
 
 
     /** Memory dynamic allocation */
@@ -300,7 +353,7 @@ int main(int argc, char **argv)
     struct sift_scalespace **ss = xmalloc(4*sizeof(struct sift_scalespace*));
 
     /** Algorithm */
-    struct sift_keypoints* k = sift_anatomy(xx, w, h, p, ss, kk);
+    struct sift_keypoints* k = sift_anatomy(x, w, h, p, ss, kk);
 
     /** OUTPUT */
     int flag = flagverb_keys + 1;

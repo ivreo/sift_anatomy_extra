@@ -76,9 +76,9 @@ Type
 
 in the directory where the Makefile is located.
 The code relies of the following common libraries:
-  - libpng12-dev 
-  - libjpeg-dev 
-  - libtiff5-dev 
+  - libpng12-dev
+  - libjpeg-dev
+  - libtiff5-dev
   - libfftw3-dev
   - libopenexr-dev
 

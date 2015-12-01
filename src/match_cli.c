@@ -224,6 +224,9 @@ int main(int argc, char **argv)
     sift_read_keypoints(k1, argv[1], n_hist, n_ori, n_bins, readflag);
     sift_read_keypoints(k2, argv[2], n_hist, n_ori, n_bins, readflag);
 
+
+    debug("size read keys / k1 %i / k2 %i /", k1->size, k2->size);
+
     // Matching
     matching(k1, k2, out_k1, out_k2A, out_k2B, thresh, meth_flag);
 
