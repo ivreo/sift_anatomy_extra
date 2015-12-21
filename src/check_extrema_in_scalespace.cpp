@@ -92,8 +92,6 @@ static int pick_option(int* c, char*** v, char* opt, char* val)
  */
 static int parse_options(int argc,
                          char** argv,
-                         //char* label_keys,
-                         //char* label_ss,
                          _myfloat* epsilon,
                          _myfloat* r1,
                          _myfloat* r2,
@@ -183,7 +181,7 @@ int main(int argc, char **argv)
     _myfloat sigma_min = d->octaves[0]->sigmas[0];
     _myfloat delta_min = d->octaves[0]->delta;
 
-    debug("nspo %i", n_spo);
+    //debug("nspo %i", n_spo);
 
     int noct = d->nOct;
 
@@ -203,7 +201,7 @@ int main(int argc, char **argv)
         int s = keysIn->list[k]->s;
         int i = keysIn->list[k]->i;
         int j = keysIn->list[k]->j;
-        debug( "(o,s,i,j) = (%i,%i,%i,%i)", o, s, i, j);
+        //debug( "(o,s,i,j) = (%i,%i,%i,%i)", o, s, i, j);
         
         _myfloat output;
         if( o < noct ){

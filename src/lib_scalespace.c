@@ -350,7 +350,7 @@ struct sift_scalespace* sift_read_scalespace_binary_file(FILE* fp)
         fread(&ws[i], sizeof(int), 1, fp);
         fread(&hs[i], sizeof(int), 1, fp);
         fread(&nScas[i], sizeof(int), 1, fp);
-
+        //debug("Architecture Oct=%i (delta, w, h, nScas) = (%f,%i, %i, %i) \n", i, deltas[i], ws[i], hs[i], nScas[i]);
         sigmas[i] = xmalloc(nScas[i]*sizeof(_myfloat));
         fread(sigmas[i], sizeof(_myfloat), nScas[i], fp);
     }
@@ -358,7 +358,6 @@ struct sift_scalespace* sift_read_scalespace_binary_file(FILE* fp)
     struct sift_scalespace* ss = sift_malloc_scalespace(nOct, deltas, ws, hs, nScas, sigmas);
     // load scale-space
     for(int i = 0; i < nOct; i++){
-        //debug("octave %i", i);
         fread(ss->octaves[i]->imStack, sizeof(_myfloat), nScas[i]*hs[i]*ws[i], fp);
     }
     return ss;

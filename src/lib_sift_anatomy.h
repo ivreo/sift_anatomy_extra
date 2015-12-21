@@ -77,7 +77,6 @@ struct sift_parameters
     int discrete_extrema_dR;  // Each scale-space sample is compared to
                               // the samples on the surface.
 
-
     _myfloat discrete_sphere_r;  // define the sphere 
     _myfloat discrete_sphere_dr;
 
@@ -135,10 +134,10 @@ void scalespace_compute_dog(const struct sift_scalespace *s,
                                    struct sift_scalespace *d);
 
 void keypoints_find_3d_discrete_extrema(struct sift_scalespace* d,
-                                               struct sift_keypoints* keys,
-                                               int n_ori,
-                                               int n_hist,
-                                               int n_bins);
+                                        struct sift_keypoints* keys,
+                                        int n_ori,
+                                        int n_hist,
+                                        int n_bins);
 
 void keypoints_find_3d_discrete_extrema_epsilon(struct sift_scalespace* d,
                                                struct sift_keypoints* keys,
@@ -245,5 +244,31 @@ void keypoints_interpolate_position_controlled(struct sift_scalespace *d,
                                         int flag_jumpinscale,
                                         _myfloat fnspo,
                                         _myfloat sigma_min);
+
+
+
+
+
+
+
+
+
+// functions not using the scale-space structure
+
+
+void find_3d_extrema_in_volume(_myfloat* v, int h, int w, int ns,
+                               struct sift_keypoints *keys,
+                               _myfloat epsilon);
+
+void interpolate_keypoints_in_volume(_myfloat *v, int h, int w, int ns,
+                                     struct sift_keypoints *kin,
+                                     struct sift_keypoints *kout,
+                                     int itermax,
+                                     _myfloat ofstMax_X,
+                                     _myfloat ofstMax_S,
+                                     int flag_jumpinscale);
+
+void compute_edge_response_in_volume(_myfloat *v, int h, int w, int ns,
+                                     struct sift_keypoints *keys);
 
 #endif // _LIB_SIFT_ANATOMY_H_

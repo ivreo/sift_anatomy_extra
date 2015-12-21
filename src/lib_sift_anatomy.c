@@ -648,7 +648,7 @@ void keypoints_find_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* d
 // We check a set of keypoints by comparing the nearest discrete sample on the
 // surface of a sphere defined by parameter r and dr.
 void keypoints_check_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* d,
-                                               struct sift_keypoints* keysIn,
+                                                        struct sift_keypoints* keysIn,
                                                struct sift_keypoints* keysExtrema,
                                                struct sift_keypoints* keysNotExtrema,
                                                int n_ori,
@@ -659,8 +659,7 @@ void keypoints_check_3d_discrete_extrema_epsilon_sphere(struct sift_scalespace* 
                                                _myfloat dr)
 {
 
-
-    int nComp=0; // number of value comparison to confirm that the point is an extrema
+    int nComp = 0; // number of value comparison to confirm that the point is an extrema
 
     // load keypoints to check
     for( int k = 0; k < keysIn->size; k++){
@@ -1454,10 +1453,10 @@ void keypoints_discard_on_edge(struct sift_keypoints *keysIn,
  */
 //static void keypoints_attribute_orientations(const struct sift_scalespace *sx, // TODO (lib_dense_anatomy)
 void keypoints_attribute_orientations(const struct sift_scalespace *sx,
-                                             const struct sift_scalespace *sy,
-                                             const struct sift_keypoints *keysIn,
-                                             struct sift_keypoints *keysOut,
-                                             int n_bins, _myfloat lambda_ori, _myfloat t)
+                                      const struct sift_scalespace *sy,
+                                      const struct sift_keypoints *keysIn,
+                                      struct sift_keypoints *keysOut,
+                                      int n_bins, _myfloat lambda_ori, _myfloat t)
 {
     for(int k=0;k<keysIn->size;k++){
 
@@ -1541,10 +1540,10 @@ static void keypoints_attribute_one_orientation(const struct sift_scalespace *sx
 
 //static void keypoints_discard_near_the_border(struct sift_keypoints *keysIn,
 void keypoints_discard_near_the_border(struct sift_keypoints *keysIn,
-                                            struct sift_keypoints *keysAccept,
-                                            int w,
-                                            int h,
-                                            _myfloat lambda)
+                                       struct sift_keypoints *keysAccept,
+                                       int w,
+                                       int h,
+                                       _myfloat lambda)
 {
     for( int k = 0; k < keysIn->size; k++){
         struct keypoint *key = keysIn->list[k];
@@ -1700,7 +1699,8 @@ _myfloat convert_threshold(const struct sift_parameters* p)
 
 
 
-struct sift_keypoints* sift_anatomy(const _myfloat* x, int w, int h, const struct sift_parameters* p,
+struct sift_keypoints* sift_anatomy(const _myfloat* x, int w, int h,
+                                    const struct sift_parameters* p,
                                     struct sift_scalespace* ss[4],
                                     struct sift_keypoints* kk[6])
 
@@ -1862,3 +1862,273 @@ void sift_anatomy_orientation_and_description(const _myfloat* x,
     sift_free_scalespace(sx);
     sift_free_scalespace(sy);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///    CODE FOR  _from_scalespace functions
+
+
+
+
+
+void find_3d_extrema_in_volume(_myfloat* v, int h, int w, int ns,
+                               struct sift_keypoints *keys,
+                               _myfloat epsilon)
+{
+    // Precompute index offsets to the 26 neighbors in a 3x3x3 neighborhood.
+    int neighbor_offsets[26];
+    int n = 0;
+    for (int ds = -1; ds <= 1; ds++) {
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                if (ds != 0 || di != 0 || dj != 0) {
+                    neighbor_offsets[n] = (ds * h + di) * w + dj;
+                    n++;
+                }
+            }
+        }
+    }
+
+
+    // Loop through the samples of the image stack (one octave)
+    for(int s = 1; s < ns-1; s++){
+        for(int i = 1; i < h-1; i++){
+            for(int j = 1; j < w-1; j++){
+
+                const _myfloat* center = &v[s*w*h+i*w+j];
+                const _myfloat center_value = *center;
+
+                bool is_local_min = true;
+                // An optimizing compiler will unroll this loop.
+                for (int n = 0; n < 26; n++) {
+                    if (center[neighbor_offsets[n]] - epsilon <= center_value) {
+                        is_local_min = false;
+                        break; // Can stop early if a smaller neighbor was found.
+                    }
+                }
+                bool is_local_max = true;
+                // Can skip max check if center point was determined to be a local min.
+                if (is_local_min) {
+                    is_local_max = false;
+                } else {
+                    // An optimizing compiler will unroll this loop.
+                    for (int n = 0; n < 26; n++) {
+                        if (center[neighbor_offsets[n]] + epsilon >= center_value) {
+                            is_local_max = false;
+                            break; // Can stop early if a larger neighbor was found.
+                        }
+                    }
+                }
+                if(is_local_max || is_local_min) { // if 3d discrete extrema, save a candidate keypoint
+                    //struct keypoint* key = sift_malloc_keypoint(n_ori, n_hist, n_bins);
+                    struct keypoint* key = sift_malloc_keypoint(36, 4, 8);
+                    // these coordinates will be corrected
+                    //key->x = (_myfloat)i;
+                    //key->y = (_myfloat)j;
+                    key->i = i;
+                    key->j = j;
+                    key->s = s;
+                    key->val = center_value;
+                    sift_add_keypoint_to_list(key,keys);
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+void interpolate_keypoints_in_volume(_myfloat *v, int h, int w, int ns,
+                           struct sift_keypoints *kin,
+                           struct sift_keypoints *kout,
+                           int itermax,
+                           _myfloat ofstMax_X,
+                           _myfloat ofstMax_S,
+                           int flag_jumpinscale)
+
+{
+
+    for(int k = 0; k<kin->size; k++){
+
+        /* Loading keypoint and associated octave */
+        struct keypoint* key = kin->list[k];
+        int s = key->s;
+        int i = key->i;
+        int j = key->j;
+        _myfloat val = key->val;
+
+        int ic=i;   /* current value of i coordinate - at each interpolation */
+        int jc=j;
+        int sc=s;
+        int nIntrp = 0;
+        bool isConv = false;
+        _myfloat ofstX = 0.;
+        _myfloat ofstY = 0.;
+        _myfloat ofstS = 0.;
+
+        // Option handling to only consider the discrete extrema
+        if (itermax == 0){ // no interpolation
+            isConv = true;
+        }
+
+        while( nIntrp < itermax ){
+
+            nIntrp += 1;
+
+            /** Extrema interpolation via a quadratic function */
+            /*   only if the detection is not too close to the border (so the discrete 3D Hessian is well defined) */
+            if((0 < ic)&&( ic < (h-1))&&(0 < jc)&&(jc < (w-1))){
+                inverse_3D_Taylor_second_order_expansion(v, w, h, ns, ic, jc, sc, &ofstX, &ofstY, &ofstS, &val);
+            }else{
+                isConv = false;
+                nIntrp = itermax;  // If the point is on the edge stop interpolation process.
+                break;
+            }
+            /** Test if the quadratic model is consistent */
+            if( (ABS(ofstX) < ofstMax_X) && (ABS(ofstY) < ofstMax_X) && (ABS(ofstS) < ofstMax_S) ){
+                isConv = true;
+                break;
+            }else{ // move to another point
+                // space...
+                if((ofstX > +ofstMax_X) && ((ic+1) < (h-1))) {ic +=1;}
+                if((ofstX < -ofstMax_X) && ((ic-1) >  0   )) {ic -=1;}
+                if((ofstY > +ofstMax_X) && ((jc+1) < (w-1))) {jc +=1;}
+                if((ofstY < -ofstMax_X) && ((jc-1) >  0   )) {jc -=1;}
+                // ... and scale.
+                if (flag_jumpinscale == 1){ 
+                    if((ofstS > +ofstMax_S) && ((sc+1) < (ns-1))) {sc +=1;}
+                    if((ofstS < -ofstMax_S) && ((sc-1) >    0  )) {sc -=1;}
+                }
+            }
+        }
+
+        if(isConv == true){
+            /** Create key and save in corresponding keypoint structure */
+            struct keypoint* keycp = sift_malloc_keypoint_from_model_and_copy(key);
+            keycp->x = ofstX;
+            keycp->y = ofstY;
+            keycp->sigma = ofstS;
+            keycp->i = ic;
+            keycp->j = jc;
+            keycp->s = sc;
+            keycp->val = val;
+            // EXTRA - DENSE number of iteration
+            //keycp->iter = nIntrp;
+            // EXTRA - offset for last interpolation
+            sift_add_keypoint_to_list(keycp, kout);
+        }
+    }
+}
+
+
+
+
+void compute_edge_response_in_volume(_myfloat *v, int h, int w, int ns,
+                                       struct sift_keypoints *keys)
+{
+    for(int k=0;k<keys->size;k++) {
+
+        /* Loading keypoint and associated octave */
+        struct keypoint* key = keys->list[k];
+        int s = key->s;
+        int i = key->i;
+        int j = key->j;
+        _myfloat* im = &v[s*w*h];
+
+        /* Compute the 2d Hessian at pixel (i,j) */
+        _myfloat hXX = im[(i-1)*w+j]+im[(i+1)*w+j]-2*im[i*w+j];
+        _myfloat hYY = im[i*w+(j+1)]+im[i*w+(j-1)]-2*im[i*w+j] ;
+        _myfloat hXY = 1./4*((im[(i+1)*w+(j+1)]-im[(i+1)*w+(j-1)])-(im[(i-1)*w+(j+1)]-im[(i-1)*w+(j-1)]));
+
+        /* Harris and Stephen Edge response */
+        _myfloat edgeResp = (hXX + hYY)*(hXX + hYY)/(hXX*hYY - hXY*hXY);
+        key->edgeResp = edgeResp; /* Harris and Stephen computed on the DoG operator */
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

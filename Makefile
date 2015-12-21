@@ -57,7 +57,7 @@ match= $(BINMATCH)
 demo= $(BINDEMO)
 #default: $(OBJDIR) $(BINDIR) $(sift) $(match) $(demo)
 #extra= $(BINDIR) $(BINDIR)/match_cli_ellipse $(BINDIR)/normalized_patch $(BINDIR)/find_orientation_and_describe_keys $(BINDIR)/extra_sift_cli $(BINDIR)/gradual
-extra= $(BINDIR) $(BINDIR)/gradual  $(BINDIR)/extra_sift_cli   $(BINDIR)/grab_ss_neighborhood $(BINDIR)/check_extremum_in_cube $(BINDIR)/check_extrema_in_scalespace   #$(BINDIR)/extra_sift_cli_extrema_patches
+extra= $(BINDIR) $(BINDIR)/gradual    $(BINDIR)/write_dct_scalespace $(BINDIR)/crop_from_scalespace  $(BINDIR)/extra_sift_cli   $(BINDIR)/grab_ss_neighborhood $(BINDIR)/check_extremum_in_cube $(BINDIR)/descriptors_from_scalespace  $(BINDIR)/check_extrema_in_scalespace $(BINDIR)/check_extrema_from_scalespace $(BINDIR)/detection_from_scalespace  #$(BINDIR)/extra_sift_cli_extrema_patches
 default: $(OBJDIR) $(BINDIR) $(sift) $(match) $(demo) $(extra)
 
 #---------------------------------------------------------------
@@ -179,6 +179,11 @@ $(BINDIR)/extra_sift_cli : $(SRCDIR)/extra_sift_cli.cpp $(OBJ) $(OBJDIR)/iio.o $
 $(BINDIR)/gradual : $(SRCDIR)/gradual.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
 	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
+$(BINDIR)/write_dct_scalespace : $(SRCDIR)/write_dct_scalespace.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
+
+$(BINDIR)/crop_from_scalespace : $(SRCDIR)/crop_from_scalespace.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
 
 $(OBJDIR)/lib_check_extrema.o : $(SRCDIR)/lib_check_extrema.c $(OBJDIR)/lib_scalespace.o $(OBJDIR)/lib_util.o
 	$(CC) $(CFLAGS) $(OFLAGS) -c -o $@ $^
@@ -195,6 +200,15 @@ $(BINDIR)/check_extremum_in_cube : $(SRCDIR)/check_extremum_in_cube.cpp $(OBJ) $
 
 $(BINDIR)/check_extrema_in_scalespace : $(SRCDIR)/check_extrema_in_scalespace.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_check_extrema.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
 	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
+
+$(BINDIR)/check_extrema_from_scalespace : $(SRCDIR)/check_extrema_from_scalespace.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_check_extrema.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
+
+$(BINDIR)/descriptors_from_scalespace : $(SRCDIR)/descriptors_from_scalespace.cpp $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/io_exr.o  $(OBJDIR)/lib_check_extrema.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CPP) $(CPPFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lIlmImf -lHalf -lfftw3 -lfftw3f #-lfftw3q
+
+$(BINDIR)/detection_from_scalespace : $(SRCDIR)/detection_from_scalespace.c $(OBJ) $(OBJDIR)/iio.o $(OBJDIR)/io_png.o  $(OBJDIR)/lib_fourier.o $(OBJDIR)/lib_dense_anatomy.o $(OBJDIR)/lib_discrete_extra.o
+	$(CC) $(CFLAGS) $(OFLAGS) -o $@ $^ $(LIBS) -ltiff -ljpeg -lfftw3 -lfftw3f #-lfftw3q
 
 
 #-------------------------------------------------------------------------------------

@@ -84,7 +84,8 @@ this program. If not, see
  *   image extension :  symmetrization at x=-1/2 
  * 
  */
-void sift_compute_gradient(const _myfloat* im, _myfloat* im_x, _myfloat* im_y, int w, int h){
+void sift_compute_gradient(const _myfloat* im, _myfloat* im_x, _myfloat* im_y, int w, int h)
+{
 
     const _myfloat* p_in;
     const _myfloat* p_in_p;
@@ -129,6 +130,30 @@ void sift_compute_gradient(const _myfloat* im, _myfloat* im_x, _myfloat* im_y, i
     }
 }
 
+/**
+ *  5 points Laplacian finite difference scheme
+ */
+void compute_laplacian(_myfloat* in, _myfloat* out, int w, int h)
+{
+    // Handling borders - zeros
+    for(int i = 0; i < h; i++){
+        in[i*w] = 0.0;           // first column
+        in[i*w+(w-1)] = 0.0;     // last column
+    }
+    for(int j = 0; j < w; j++){
+        in[j] = 0.0;             // first line
+        in[(h-1)*w + j] = 0.0;   // last line
+    }
+
+    // Laplacian
+    for(int i=1; i<h-1; i++){
+        for(int j=1; j<w-1; j++){
+            out[i*w+j] = in[(i+1)*w+j] + in[(i-1)*w+j] \
+                         + in[i*w+j+1] + in[i*w+j-1] \
+                         - 4*in[i*w+j];
+        }
+    }
+}
 
 
 
@@ -308,3 +333,88 @@ static void convolve_symm(const _myfloat* in, _myfloat* out, int w, int h,
     }
     xfree(im_tmp);
 }
+
+
+
+
+
+
+
+/**
+ *  5 points Laplacian finite difference scheme
+ */
+void compute_laplacian(_myfloat* in, _myfloat* out, int w, int h)
+{
+    // Handling borders - zeros
+    for(int i = 0; i < h; i++){
+        in[i*w] = 0.0;           // first column
+        in[i*w+(w-1)] = 0.0;     // last column
+    }
+    for(int j = 0; j < w; j++){
+        in[j] = 0.0;             // first line
+        in[(h-1)*w + j] = 0.0;   // last line
+    }
+
+    // Laplacian
+    for(int i=1; i<h-1; i++){
+        for(int j=1; j<w-1; j++){
+            out[i*w+j] = in[(i+1)*w+j] + in[(i-1)*w+j] \
+                         + in[i*w+j+1] + in[i*w+j-1] \
+                         - 4*in[i*w+j];
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+/** @brief Compute the determinant of the 2D Hessian
+ *  
+ *    Hessian schemes : 
+ *    
+ *    d^2 u / dx^2 = u(x+1) + u(x-1) -2*u(x)
+ *  
+ *    d^2 u / dx dy = ( u(x-1,y-1) + u(x+1,y+1) - u(x-1,y+1) - u(x+1,y-1) )/4.0
+ * 
+ *    Det : Hxx*Hyy - Hxy*Hxy
+ *     
+ *
+ */
+void compute_hessian_determinant(_myfloat* in, _myfloat* out, int w, int h)
+{
+    for(int i=1; i<h-1; i++){
+        for(int j=1; j<w-1; j++){
+
+            _myfloat dxx = in[(i-1)*w+j]-2*in[i*w+j] + in[(i+1)*w+j];
+
+            _myfloat dyy = in[i*w+j-1] -2*in[i*w+j] + in[i*w+j+1];
+
+            _myfloat dxy = ( in[(i-1)*w + (j-1)]
+                    -in[(i-1)*w + (j+1)]
+                    -in[(i+1)*w + (j-1)]
+                    +in[(i+1)*w + (j+1)])/4.0;
+
+            out[i*w+j] = dxx*dyy - dxy*dxy;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

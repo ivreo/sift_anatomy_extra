@@ -109,6 +109,7 @@ void extract_portion_of_scalespace(_myfloat* cube, struct sift_scalespace*d,  in
             }
         }
     }
+
 }
 
 
@@ -244,7 +245,7 @@ _myfloat confirm_extremum_is_present_inside_ball(_myfloat* cube,
             }
         }
     }
-    debug( "n_in=%i  n_out=%i", n_in, n_out);
+    //debug( "n_in=%i  n_out=%i", n_in, n_out);
 
     // Load values
     _myfloat values_in[h*h*h];

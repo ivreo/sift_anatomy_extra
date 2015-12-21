@@ -446,7 +446,6 @@ int main(int argc, char **argv)
         kk[i] = sift_malloc_keypoints();
 
     /** Algorithm */
-//    struct sift_keypoints* k = sift_anatomy_gradual_old(x, w, h, p, kk, flag_dct, flag_interp);
     struct sift_keypoints* k = sift_anatomy_gradual(x, w, h, p, kk, flag_interp);
 
     /** OUTPUT */

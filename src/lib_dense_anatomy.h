@@ -27,4 +27,21 @@ struct sift_keypoints* sift_anatomy_gradual(_myfloat* x, int w, int h, struct si
 
 
 
+
+void compute_and_write_dct_scalespace(FILE* fp,
+                                      _myfloat* in, int w_in, int h_in,
+                                      struct sift_parameters* p,
+                                      int flag_interp,
+                                      int flag_type);
+
+// ext is the value added to the cube in case it's out of the scalespace limit
+void crop_from_scalespace_file(_myfloat* cube, FILE* fp,
+                               int o, int s, int i, int j,
+                               int ri, int rj, int rs, _myfloat ext);
+
+
+
+
+
+
 #endif //_LIB_DENSE_ANATOMY_H_
