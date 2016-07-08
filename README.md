@@ -5,10 +5,10 @@
 Implementation of the SIFT method.
 This C/C++ ANSI source code is related to the article
 
-    1. "An Analysis of the scale-space sampling in SIFT."
+    1. "An Analysis of the factors affecting keypoint stability in scale-space"
         I. Rey Otero, J.M. Morel,  M. Delbracio
-        ICIP 2014.
-        http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=7025982&tag=1
+        SIAM Journal on Imaging Science.
+        http://dx.doi.org/10.1007/s10851-016-0657-5
 
 Part of the code is also related to the article
 
